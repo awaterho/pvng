@@ -19,7 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 
-import glMatrix from './gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 import color from './color.js';
 import UniqueObjectIdPool from './unique-object-id-pool.js';
 import canvas from './gfx/canvas.js';
@@ -60,6 +60,29 @@ on how to unblock it.\
 var vec3 = glMatrix.vec3;
 var mat3 = glMatrix.mat3;
 var mat4 = glMatrix.mat4;
+
+// gl-matrix v3 dropped mat4.fromMat3 (present in the v2.2.0 this code was
+// originally written against); this reproduces its exact behavior: copy a
+// mat3 into the upper-left 3x3 of an identity mat4.
+function mat4FromMat3(out, a) {
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  out[3] = 0;
+  out[4] = a[3];
+  out[5] = a[4];
+  out[6] = a[5];
+  out[7] = 0;
+  out[8] = a[6];
+  out[9] = a[7];
+  out[10] = a[8];
+  out[11] = 0;
+  out[12] = 0;
+  out[13] = 0;
+  out[14] = 0;
+  out[15] = 1;
+  return out;
+}
 
 function isiOS() {
   return (/(iPad|iPhone|iPod)/g).test(navigator.userAgent);
@@ -528,7 +551,7 @@ Viewer.prototype = {
       ms |= 0;
       vec3.normalize(normalizedAxis, axis);
       geom.axisRotation(targetRotation3, normalizedAxis, angle);
-      mat4.fromMat3(targetRotation4, targetRotation3);
+      mat4FromMat3(targetRotation4, targetRotation3);
       mat4.mul(targetRotation4, targetRotation4, this._cam.rotation());
       if (ms === 0) {
         this._cam.setRotation(targetRotation4);
@@ -553,7 +576,7 @@ Viewer.prototype = {
     var rotation4;  
     if (rotation.length === 9) {
       rotation4 = mat4.create();
-      mat4.fromMat3(rotation4, rotation);
+      mat4FromMat3(rotation4, rotation);
     } else {
       rotation4 = mat4.clone(rotation);
     }

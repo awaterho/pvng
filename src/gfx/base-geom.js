@@ -19,7 +19,7 @@
 // SOFTWARE.
 
 import utils from '../utils.js';
-import glMatrix from '../gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 import SceneNode from './scene-node.js';
 
 var vec3 = glMatrix.vec3;

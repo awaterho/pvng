@@ -25,7 +25,7 @@ import MeshGeom from './mesh-geom.js';
 import gfxGeomBuilders from './geom-builders.js';
 import gfxVertAssoc from './vert-assoc.js';
 import color from '../color.js';
-import glMatrix from '../gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 
 var vec3 = glMatrix.vec3;
 var vec4 = glMatrix.vec4;

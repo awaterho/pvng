@@ -1,5 +1,5 @@
 import { test, strictEqual, deepEqual } from '../helpers.js';
-import glMatrix from '../../gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 import io from '../../io.js';
 
 

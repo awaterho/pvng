@@ -2,7 +2,7 @@ import { test } from '../shim.js';
 import pv from '../../../src/viewer.js';
 import io from '../../../src/io.js';
 import color from '../../../src/color.js';
-import glMatrix from '../../../src/gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 
 var mat4 = glMatrix.mat4;
 

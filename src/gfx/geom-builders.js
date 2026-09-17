@@ -19,7 +19,7 @@
 // SOFTWARE.
 
 // contains classes for constructing geometry for spheres, cylinders and tubes.
-import glMatrix from '../gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 import geom from '../geom.js';
 
 var vec3 = glMatrix.vec3;

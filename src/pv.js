@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-import glMatrix from './gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 import viewer from './viewer.js';
 import io from './io.js';
 import mol from './mol/all.js';

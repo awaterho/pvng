@@ -18,11 +18,34 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-import glMatrix from '../gl-matrix.js';
+import * as glMatrix from 'gl-matrix';
 
 var vec3 = glMatrix.vec3;
 var vec4 = glMatrix.vec4;
 var mat4 = glMatrix.mat4;
+
+// gl-matrix v3 dropped mat4.fromMat3 (present in the v2.2.0 this code was
+// originally written against); this reproduces its exact behavior: copy a
+// mat3 into the upper-left 3x3 of an identity mat4.
+function mat4FromMat3(out, a) {
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  out[3] = 0;
+  out[4] = a[3];
+  out[5] = a[4];
+  out[6] = a[5];
+  out[7] = 0;
+  out[8] = a[6];
+  out[9] = a[7];
+  out[10] = a[8];
+  out[11] = 0;
+  out[12] = 0;
+  out[13] = 0;
+  out[14] = 0;
+  out[15] = 1;
+  return out;
+}
 
 function floatArraysAreEqual(lhs, rhs) {
   if (lhs.length !== rhs.length) {
@@ -108,7 +131,7 @@ Cam.prototype = {
         update = true;
       }
     } else {
-      mat4.fromMat3(this._rotation, rot);
+      mat4FromMat3(this._rotation, rot);
       update = true;
     }
     if (update) {
