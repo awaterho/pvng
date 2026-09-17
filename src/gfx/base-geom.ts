@@ -107,7 +107,7 @@ const eachCentralAtomSym = (function() {
 // vertArrays()/shaderForStyleAndPass()/_drawVertArrays() are used here but
 // must be provided by whichever subclass sets up the actual vertex buffers
 // (gfx/line-geom.ts, gfx/mesh-geom.ts).
-interface BaseGeom extends ISceneNode {
+export interface BaseGeom extends ISceneNode {
   _idRanges: { recycle(): void }[];
   _vertAssocs: VertAssoc[];
   _showRelated: string | null;

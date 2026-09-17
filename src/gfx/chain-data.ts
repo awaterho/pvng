@@ -24,7 +24,7 @@ import IndexedVertexArray from './indexed-vertex-array';
 import type Cam from './cam';
 import type { ShaderProgram } from './cam';
 
-interface Shader extends ShaderProgram {
+export interface Shader extends ShaderProgram {
   symId: WebGLUniformLocation;
   posAttrib: number;
   colorAttrib: number;

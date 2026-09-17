@@ -20,7 +20,7 @@
 import utils from '../utils';
 import VertexArrayBase from './vertex-array-base';
 
-interface Shader extends WebGLProgram {
+export interface Shader extends WebGLProgram {
   posAttrib: number;
   normalAttrib: number;
   colorAttrib: number;
@@ -28,7 +28,7 @@ interface Shader extends WebGLProgram {
   selectAttrib: number;
 }
 
-interface Uint16AllocatorLike {
+export interface Uint16AllocatorLike {
   request(length: number): Uint16Array;
   release(buffer: Uint16Array): void;
 }
