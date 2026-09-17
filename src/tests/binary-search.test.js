@@ -1,5 +1,5 @@
-import { test, strictEqual } from './helpers.js';
-import utils from '../utils.js';
+import { test, strictEqual } from './helpers';
+import utils from '../utils';
 
 test("binary search", function() {
   var VALUES = [1,2,4,6,10,20,21,22,23];

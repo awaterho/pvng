@@ -19,11 +19,11 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import utils from '../utils.js';
-import geom from '../geom.js';
-import chain from './chain.js';
-import bond from './bond.js';
-import select from './select.js';
+import utils from '../utils';
+import geom from '../geom';
+import chain from './chain';
+import bond from './bond';
+import select from './select';
 
 var vec3 = glMatrix.vec3;
 

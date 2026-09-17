@@ -1,6 +1,6 @@
-import { test } from '../helpers.js';
-import mol from '../../mol/all.js';
-import io from '../../io.js';
+import { test } from '../helpers';
+import mol from '../../mol/all';
+import io from '../../io';
 
 test('assign helix sheet', function(assert) {
   var done = assert.async();

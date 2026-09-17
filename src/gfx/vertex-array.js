@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
-import VertexArrayBase from './vertex-array-base.js';
+import utils from '../utils';
+import VertexArrayBase from './vertex-array-base';
 
 // (unindexed) vertex array for line-based geometries
 function VertexArray(gl, numVerts, float32Allocator)  {

@@ -19,7 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 
-import utils from '../utils.js';
+import utils from '../utils';
 
 function isWebGLSupported(gl) {
   if (document.readyState !== "complete" &&

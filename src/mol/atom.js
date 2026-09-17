@@ -19,7 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import utils from '../utils.js';
+import utils from '../utils';
 
 
 var vec3 = glMatrix.vec3;

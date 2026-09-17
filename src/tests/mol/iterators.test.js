@@ -1,5 +1,5 @@
-import { test, strictEqual } from '../helpers.js';
-import mol from '../../mol/all.js';
+import { test, strictEqual } from '../helpers';
+import mol from '../../mol/all';
 
 function makeSimpleMolecule() {
   var m = new mol.Mol();

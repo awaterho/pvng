@@ -1,5 +1,5 @@
-import { test } from '../helpers.js';
-import io from '../../io.js';
+import { test } from '../helpers';
+import io from '../../io';
 
 var SELECT_HETATM='\
 ATOM   3316  C   GLY B 214      24.173   7.911  -3.276  1.00 94.23           C\n\

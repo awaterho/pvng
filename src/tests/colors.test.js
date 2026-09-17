@@ -1,5 +1,5 @@
-import { test, strictEqual } from './helpers.js';
-import color from '../color.js';
+import { test, strictEqual } from './helpers';
+import color from '../color';
 
 function compareColor(lhs, rhs) {
   strictEqual(lhs[0], rhs[0]);

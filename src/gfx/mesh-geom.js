@@ -18,10 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
-import BaseGeom from './base-geom.js';
-import cd from './chain-data.js';
-import IndexedVertexArray from './indexed-vertex-array.js';
+import utils from '../utils';
+import BaseGeom from './base-geom';
+import cd from './chain-data';
+import IndexedVertexArray from './indexed-vertex-array';
 
 var MeshChainData = cd.MeshChainData;
 

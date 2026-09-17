@@ -1,6 +1,6 @@
-import { test } from '../helpers.js';
-import mol from '../../mol/all.js';
-import io from '../../io.js';
+import { test } from '../helpers';
+import mol from '../../mol/all';
+import io from '../../io';
 
 // fragment used in most of the tests, extracted from PDB id: 1r6a
 var PDB_FRAGMENT="\n\

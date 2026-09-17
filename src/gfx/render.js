@@ -18,13 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import geom from '../geom.js';
-import BillboardGeom from './billboard-geom.js';
-import LineGeom from './line-geom.js';
-import MeshGeom from './mesh-geom.js';
-import gfxGeomBuilders from './geom-builders.js';
-import gfxVertAssoc from './vert-assoc.js';
-import color from '../color.js';
+import geom from '../geom';
+import BillboardGeom from './billboard-geom';
+import LineGeom from './line-geom';
+import MeshGeom from './mesh-geom';
+import gfxGeomBuilders from './geom-builders';
+import gfxVertAssoc from './vert-assoc';
+import color from '../color';
 import * as glMatrix from 'gl-matrix';
 
 var vec3 = glMatrix.vec3;

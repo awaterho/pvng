@@ -19,8 +19,8 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import utils from '../utils.js';
-import atom from './atom.js';
+import utils from '../utils';
+import atom from './atom';
 
 var vec3 = glMatrix.vec3;
 var Atom = atom.Atom;

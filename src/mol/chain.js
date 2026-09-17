@@ -19,9 +19,9 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import utils from '../utils.js';
-import residue from './residue.js';
-import trace from './trace.js';
+import utils from '../utils';
+import residue from './residue';
+import trace from './trace';
 
 var vec3 = glMatrix.vec3;
 var Residue = residue.Residue;

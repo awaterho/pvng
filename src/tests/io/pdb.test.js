@@ -1,6 +1,6 @@
-import { test, strictEqual, deepEqual } from '../helpers.js';
+import { test, strictEqual, deepEqual } from '../helpers';
 import * as glMatrix from 'gl-matrix';
-import io from '../../io.js';
+import io from '../../io';
 
 
 var mat4 = glMatrix.mat4;

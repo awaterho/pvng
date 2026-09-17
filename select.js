@@ -1,4 +1,4 @@
-import PV from './src/pv.js';
+import PV from './src/pv';
 
 var pv = PV;
 window.pv = pv;

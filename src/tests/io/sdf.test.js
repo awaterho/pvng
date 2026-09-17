@@ -1,6 +1,6 @@
-import { test } from '../helpers.js';
+import { test } from '../helpers';
 import * as glMatrix from 'gl-matrix';
-import io from '../../io.js';
+import io from '../../io';
 
 
 var SIMPLE_SDF = [

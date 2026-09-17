@@ -19,8 +19,8 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import utils from '../utils.js';
-import geom from '../geom.js';
+import utils from '../utils';
+import geom from '../geom';
 
 var vec3 = glMatrix.vec3;
 var quat = glMatrix.quat;

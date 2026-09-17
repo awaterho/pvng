@@ -1,5 +1,5 @@
-import { test } from '../shim.js';
-import canvas from '../../../src/gfx/canvas.js';
+import { test } from '../shim';
+import canvas from '../../../src/gfx/canvas';
 
 function createCanvas(width, height, antialias, forceManualAntialiasing) {
   var options =  {

@@ -20,7 +20,7 @@
 
 
 import * as glMatrix from 'gl-matrix';
-import geom from '../geom.js';
+import geom from '../geom';
 
 var vec3 = glMatrix.vec3;
 

@@ -1,7 +1,7 @@
-import { test } from '../shim.js';
-import pv from '../../../src/viewer.js';
-import io from '../../../src/io.js';
-import color from '../../../src/color.js';
+import { test } from '../shim';
+import pv from '../../../src/viewer';
+import io from '../../../src/io';
+import color from '../../../src/color';
 import * as glMatrix from 'gl-matrix';
 
 var mat4 = glMatrix.mat4;

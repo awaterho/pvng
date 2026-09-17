@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
-import BaseGeom from './base-geom.js';
-import chainData from './chain-data.js';
+import utils from '../utils';
+import BaseGeom from './base-geom';
+import chainData from './chain-data';
 
 var LineChainData = chainData.LineChainData;
 

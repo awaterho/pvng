@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
-import VertexArray from './vertex-array.js';
-import IndexedVertexArray from './indexed-vertex-array.js';
+import utils from '../utils';
+import VertexArray from './vertex-array';
+import IndexedVertexArray from './indexed-vertex-array';
 
 // LineChainData and MeshChainData are two internal classes that add molecule-
 // specific attributes and functionality to the IndexedVertexArray and 

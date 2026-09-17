@@ -19,12 +19,12 @@
 // SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import utils from '../utils.js';
-import color from '../color.js';
-import geom from '../geom.js';
-import gb from './geom-builders.js';
-import IndexedVertexArray from './indexed-vertex-array.js';
-import SceneNode from './scene-node.js';
+import utils from '../utils';
+import color from '../color';
+import geom from '../geom';
+import gb from './geom-builders';
+import IndexedVertexArray from './indexed-vertex-array';
+import SceneNode from './scene-node';
 
 var vec3 = glMatrix.vec3;
 var mat3 = glMatrix.mat3;

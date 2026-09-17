@@ -20,23 +20,23 @@
 
 
 import * as glMatrix from 'gl-matrix';
-import color from './color.js';
-import UniqueObjectIdPool from './unique-object-id-pool.js';
-import canvas from './gfx/canvas.js';
-import utils from './utils.js';
-import FrameBuffer from './gfx/framebuffer.js';
-import PoolAllocator from './buffer-allocators.js';
-import Cam from './gfx/cam.js';
-import shaders from './gfx/shaders.js';
-import TouchHandler from './touch.js';
-import MouseHandler from './mouse.js';
-import render from './gfx/render.js';
-import TextLabel from './gfx/label.js';
-import CustomMesh from './gfx/custom-mesh.js';
-import anim from './gfx/animation.js';
-import SceneNode from './gfx/scene-node.js';
-import geom from './geom.js';
-import slab from './slab.js';
+import color from './color';
+import UniqueObjectIdPool from './unique-object-id-pool';
+import canvas from './gfx/canvas';
+import utils from './utils';
+import FrameBuffer from './gfx/framebuffer';
+import PoolAllocator from './buffer-allocators';
+import Cam from './gfx/cam';
+import shaders from './gfx/shaders';
+import TouchHandler from './touch';
+import MouseHandler from './mouse';
+import render from './gfx/render';
+import TextLabel from './gfx/label';
+import CustomMesh from './gfx/custom-mesh';
+import anim from './gfx/animation';
+import SceneNode from './gfx/scene-node';
+import geom from './geom';
+import slab from './slab';
 
 // FIXME: Browser vendors tend to block quite a few graphic cards. Instead
 //   of showing this very generic message, implement a per-browser

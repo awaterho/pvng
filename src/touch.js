@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-import utils from './utils.js';
+import utils from './utils';
 
 function TouchHandler(element, viewer, cam) {
   this._element = element;

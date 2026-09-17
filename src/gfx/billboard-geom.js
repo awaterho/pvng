@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
-import MeshGeom from './mesh-geom.js';
+import utils from '../utils';
+import MeshGeom from './mesh-geom';
 
 function BillboardGeom(gl, float32Allocator, uint16Allocator) {
   MeshGeom.call(this, gl, float32Allocator, uint16Allocator);

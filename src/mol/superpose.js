@@ -19,10 +19,10 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import svd from '../svd.js';
-import utils from '../utils.js';
-import geom from '../geom.js';
-import mol from './mol.js';
+import svd from '../svd';
+import utils from '../utils';
+import geom from '../geom';
+import mol from './mol';
 
 var vec3 = glMatrix.vec3;
 var mat3 = glMatrix.mat3;

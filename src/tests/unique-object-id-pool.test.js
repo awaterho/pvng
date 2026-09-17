@@ -1,5 +1,5 @@
-import { test } from './helpers.js';
-import UniqueObjectIdPool from '../unique-object-id-pool.js';
+import { test } from './helpers';
+import UniqueObjectIdPool from '../unique-object-id-pool';
 
 test("simple continuous range", function(assert) {
   var idPool = new UniqueObjectIdPool();

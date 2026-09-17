@@ -19,12 +19,12 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import viewer from './viewer.js';
-import io from './io.js';
-import mol from './mol/all.js';
-import color from './color.js';
-import viewpoint from './viewpoint.js';
-import traj from './traj.js';
+import viewer from './viewer';
+import io from './io';
+import mol from './mol/all';
+import color from './color';
+import viewpoint from './viewpoint';
+import traj from './traj';
 
 // export
 export default {

@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
-import SceneNode from './scene-node.js';
+import utils from '../utils';
+import SceneNode from './scene-node';
 
 function TextLabel(gl, canvas, context, pos, text, options) {
   SceneNode.call(this, gl);

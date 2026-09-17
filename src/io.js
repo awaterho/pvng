@@ -19,8 +19,8 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import symmetry from './mol/symmetry.js';
-import mol from './mol/all.js';
+import symmetry from './mol/symmetry';
+import mol from './mol/all';
 
 var vec3 = glMatrix.vec3;
 var mat4 = glMatrix.mat4;

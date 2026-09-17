@@ -19,8 +19,8 @@
 // DEALINGS IN THE SOFTWARE.
 
 import * as glMatrix from 'gl-matrix';
-import mol from './mol.js';
-import sp from './superpose.js';
+import mol from './mol';
+import sp from './superpose';
 
 var vec3 = glMatrix.vec3;
 

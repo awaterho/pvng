@@ -18,8 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-import color from '../color.js';
-import geom from '../geom.js';
+import color from '../color';
+import geom from '../geom';
 
 // During recoloring of a render style, most of the vertex attributes, e.g.
 // normals and positions do not change. Only the color information for each

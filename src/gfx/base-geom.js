@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import utils from '../utils.js';
+import utils from '../utils';
 import * as glMatrix from 'gl-matrix';
-import SceneNode from './scene-node.js';
+import SceneNode from './scene-node';
 
 var vec3 = glMatrix.vec3;
 
