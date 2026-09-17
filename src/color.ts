@@ -23,12 +23,12 @@ type RGBA = vec4 | number[];
 
 // Structural typing for the mol data model (Atom/Residue/Chain/Mol, some
 // already converted, some not): only what the color schemes below touch.
-interface ColorResidue {
+export interface ColorResidue {
   ss(): string;
   index(): number;
   chain(): ColorChain;
 }
-interface ColorAtom {
+export interface ColorAtom {
   element(): string;
   residue(): ColorResidue;
 }
@@ -44,7 +44,7 @@ interface ColorChain {
   backboneTraces(): ColorBackboneTrace[];
   residues(): { ss(): string; index(): number }[];
 }
-interface ColorObj {
+export interface ColorObj {
   chains(): ColorChain[];
   eachAtom(callback: (atom: ColorAtom & HasProp) => void): void;
   eachResidue(callback: (residue: ColorResidue & HasProp) => void): void;
