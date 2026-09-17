@@ -1,4 +1,4 @@
-import PV from './src/pv';
+import PV from './src/index';
 
 var viewer;
 
@@ -260,7 +260,7 @@ $('#load-from-pdb').change(function() {
   var pdbId = this.value;
   this.value = '';
   this.blur();
-  var url = 'http://www.rcsb.org/pdb/files/' + pdbId + '.pdb';
+  var url = 'https://files.rcsb.org/download/' + pdbId + '.pdb';
   console.log(url)
   io.fetchPdb(url, function(s) {
     structure = s;

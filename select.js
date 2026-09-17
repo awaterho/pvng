@@ -1,4 +1,4 @@
-import PV from './src/pv';
+import PV from './src/index';
 
 var pv = PV;
 window.pv = pv;
