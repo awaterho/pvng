@@ -22,7 +22,7 @@ import utils from '../utils';
 import SceneNode, { type SceneNode as ISceneNode } from './scene-node';
 import type Cam from './cam';
 
-interface TextLabelOptions {
+export interface TextLabelOptions {
   fillStyle?: string;
   backgroundAlpha?: number;
   fontSize?: number;
@@ -55,7 +55,7 @@ function smallestPowerOfTwo(size: number): number {
 // NOTE: kept as a prototype-based constructor function -- see
 // gfx/vertex-array-base.ts/gfx/base-geom.ts for why (this chain-invokes
 // SceneNode via `.call()`).
-interface TextLabel extends ISceneNode {
+export interface TextLabel extends ISceneNode {
   _options: ResolvedTextLabelOptions;
   _pos: vec3;
   _interleavedBuffer: WebGLBuffer;

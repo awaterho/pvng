@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/pv.js'),
+      entry: resolve(__dirname, 'src/index.ts'),
       name: 'pv',
       formats: ['es', 'cjs', 'iife'],
       fileName: (format) => {

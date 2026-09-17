@@ -121,7 +121,9 @@ class MouseHandler {
     this._viewer.requestRedraw();
   }
 
-  private _mouseDoubleClick = (function() {
+  // NOTE: not private -- touch.ts's TouchViewer structural type reaches
+  // through Viewer._mouseHandler to call this directly.
+  _mouseDoubleClick = (function() {
     return function(this: MouseHandler, event: MouseEvent): void {
       const rect = this._canvas.domElement().getBoundingClientRect();
       const picked = this._viewer.pick(

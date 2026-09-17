@@ -31,7 +31,7 @@ import type { ContinuousIdRange } from '../unique-object-id-pool';
 
 // Structural typing for the mol data model (some tiers already typed, some
 // not): only what render.ts touches to build geometry.
-interface RenderAtom {
+export interface RenderAtom {
   pos(): vec3;
   element(): string;
   bonds(): RenderBond[];
@@ -64,7 +64,7 @@ interface RenderChain {
   backboneTraces(): RenderTrace[];
   name(): string;
 }
-interface RenderStructure {
+export interface RenderStructure {
   eachChain(callback: (chain: RenderChain) => void): void;
   select(what: unknown): RenderStructure;
 }
@@ -84,7 +84,7 @@ type TubeProfileT = InstanceType<typeof gfxGeomBuilders.TubeProfile>;
 // in place by the render functions below (e.g. exports.spheres assigns
 // opts.protoSphere for spheresForChain to read) -- every field ends up
 // required from the perspective of whichever function reads it.
-interface RenderOptions {
+export interface RenderOptions {
   color: InstanceType<typeof color.ColorOp>;
   idPool: UniqueObjectIdPool<ObjIdData>;
   float32Allocator: AllocatorLike<Float32Array>;

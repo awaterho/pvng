@@ -122,7 +122,7 @@ function capTubeEnd(va: DynamicIndexedVertexArray, baseIndex: number, numTubeVer
 // NOTE: kept as a prototype-based constructor function -- see
 // gfx/vertex-array-base.ts/gfx/base-geom.ts for why (this chain-invokes
 // SceneNode via `.call()`).
-interface CustomMesh extends ISceneNode {
+export interface CustomMesh extends ISceneNode {
   _float32Allocator: unknown;
   _uint16Allocator: unknown;
   _data: DynamicIndexedVertexArray;
