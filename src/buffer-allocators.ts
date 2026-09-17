@@ -18,47 +18,41 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-function Slab(near, far) {
-  this.near = near;
-  this.far = far;
-}
+type TypedArray = Float32Array | Uint16Array | Uint8Array | Int32Array;
+type TypedArrayConstructor<T extends TypedArray> = new (length: number) => T;
 
-function FixedSlab(options) {
-  options = options || {};
-  this._near = options.near || 0.1;
-  this._far = options.far || 400.0;
-}
+class PoolAllocator<T extends TypedArray> {
+  private _freeArrays: T[];
+  private _bufferType: TypedArrayConstructor<T>;
 
-FixedSlab.prototype.update = function() {
-  return new Slab(this._near, this._far);
-};
+  constructor(bufferType: TypedArrayConstructor<T>) {
+    this._freeArrays = [];
+    this._bufferType = bufferType;
+  }
 
-function AutoSlab() {
-  this._far = 100.0;
-}
-
-AutoSlab.prototype.update = function(objects, cam) {
-  var center = cam.center();
-  var radius = null;
-  for (var i = 0; i < objects.length; ++i) {
-    var obj = objects[i];
-    if (!obj.visible()) {
-      continue;
+  request(requestedLength: number): T {
+    let bestIndex = -1;
+    let bestLength: number | null = null;
+    for (let i = 0; i < this._freeArrays.length; ++i) {
+      const free = this._freeArrays[i]!;
+      const length = free.length;
+      if (length >= requestedLength &&
+          (bestLength === null || length < bestLength)) {
+        bestLength = length;
+        bestIndex = i;
+      }
     }
-    radius = obj.updateSquaredSphereRadius(center, radius);
+    if (bestIndex !== -1) {
+      const result = this._freeArrays[bestIndex]!;
+      this._freeArrays.splice(bestIndex, 1);
+      return result;
+    }
+    return new this._bufferType(requestedLength);
   }
-  if (radius === null) {
-    return null;
-  }
-  radius = Math.sqrt(radius);
-  var zoom = cam.zoom();
-  var newFar = (radius + zoom) * 1.05;
-  var newNear = 0.1;//Math.max(0.1, zoom - radius);
-  return new Slab(newNear, newFar);
-};
 
-export default {
-  FixedSlab : FixedSlab,
-  AutoSlab : AutoSlab,
-  Slab : Slab
-};
+  release(buffer: T): void {
+    this._freeArrays.push(buffer);
+  }
+}
+
+export default PoolAllocator;

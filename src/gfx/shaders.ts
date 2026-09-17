@@ -18,7 +18,28 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-export default {
+export interface ShaderSources {
+  PRELUDE_FS: string;
+  LINES_FS: string;
+  SELECT_LINES_FS: string;
+  SELECT_LINES_VS: string;
+  SELECT_VS: string;
+  SELECT_FS: string;
+  LINES_VS: string;
+  HEMILIGHT_FS: string;
+  PHONG_FS: string;
+  HEMILIGHT_VS: string;
+  OUTLINE_FS: string;
+  OUTLINE_VS: string;
+  TEXT_VS: string;
+  TEXT_FS: string;
+  SPHERES_FS: string;
+  SPHERES_VS: string;
+  SELECT_SPHERES_FS: string;
+  SELECT_SPHERES_VS: string;
+}
+
+const shaders: ShaderSources = {
 // NOTE: The shader code below use the placeholder ${PRECISION} variable
 // for the shader precision. This values is replaced before compiling 
 // the shader program with highp on iOS and mediump on all other devices. 
@@ -449,4 +470,6 @@ void main() {\n\
 }'
 
 };
+
+export default shaders;
 

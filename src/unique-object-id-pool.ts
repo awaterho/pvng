@@ -19,79 +19,95 @@
 // DEALINGS IN THE SOFTWARE.
 
 // A continous range of object identifiers.
-function ContinuousIdRange(pool, start, end) {
-  this._pool = pool;
-  this._start = start;
-  this._next = start;
-  this._end = end;
-}
+class ContinuousIdRange<T> {
+  _pool: UniqueObjectIdPool<T>;
+  _start: number;
+  _next: number;
+  _end: number;
 
-ContinuousIdRange.prototype = {
-  nextId : function(obj) {
-    var id = this._next;
+  constructor(pool: UniqueObjectIdPool<T>, start: number, end: number) {
+    this._pool = pool;
+    this._start = start;
+    this._next = start;
+    this._end = end;
+  }
+
+  nextId(obj: T): number {
+    const id = this._next;
     console.assert(this._next < this._end);
     this._next++;
     this._pool._objects[id] = obj;
     return id;
-  },
-  hasLeft : function() {
+  }
+
+  hasLeft(): boolean {
     return this._next < this._end;
-  },
-  recycle : function() {
+  }
+
+  recycle(): void {
     this._pool.recycle(this);
-  },
-  length : function() {
+  }
+
+  length(): number {
     return this._end - this._start;
   }
-};
-
-// simple class that generates unique object identifiers. Identifiers are 
-// requested in sequential groups. 
-// FIXME: describe why!
-function UniqueObjectIdPool() {
-  this.clear();
 }
 
-UniqueObjectIdPool.prototype = {
-  MAX_ID : 16777216, // 2^24
-  getContinuousRange : function(num) {
+// simple class that generates unique object identifiers. Identifiers are
+// requested in sequential groups.
+// FIXME: describe why!
+class UniqueObjectIdPool<T> {
+  static readonly MAX_ID = 16777216; // 2^24
+
+  _objects!: Record<number, T>;
+  _unusedRangeStart!: number;
+  _free!: ContinuousIdRange<T>[];
+  _usedCount!: number;
+
+  constructor() {
+    this.clear();
+  }
+
+  getContinuousRange(num: number): ContinuousIdRange<T> | null {
     // FIXME: keep the "free" list sorted, so we can binary search it
     // for a good match
-    var bestIndex = -1;
-    var bestLength = null;
-    for (var i = 0; i < this._free.length; ++i) {
-      var free = this._free[i];
-      var length = free.length();
+    let bestIndex = -1;
+    let bestLength: number | null = null;
+    for (let i = 0; i < this._free.length; ++i) {
+      const free = this._free[i]!;
+      const length = free.length();
       if (length >= num && (bestLength === null || length < bestLength)) {
         bestLength = length;
         bestIndex = i;
       }
     }
     if (bestIndex !== -1) {
-      var result = this._free[bestIndex];
+      const result = this._free[bestIndex]!;
       this._free.splice(bestIndex, 1);
       this._usedCount ++;
       return result;
     }
-    var start = this._unusedRangeStart;
-    var end = start + num;
-    if (end > this.MAX_ID) {
+    const start = this._unusedRangeStart;
+    const end = start + num;
+    if (end > UniqueObjectIdPool.MAX_ID) {
       console.error('not enough free object ids.');
       return null;
     }
     this._unusedRangeStart = end;
-    var newRange = new ContinuousIdRange(this, start, end);
+    const newRange = new ContinuousIdRange<T>(this, start, end);
     this._usedCount ++;
     return newRange;
-  },
-  clear : function() {
+  }
+
+  clear(): void {
     this._objects = {};
     this._unusedRangeStart = 1;
     this._free = [];
     this._usedCount = 0;
-  },
-  recycle : function(range) {
-    for (var i = range._start; i < range._next; ++i) {
+  }
+
+  recycle(range: ContinuousIdRange<T>): void {
+    for (let i = range._start; i < range._next; ++i) {
       delete this._objects[i];
     }
     range._next = range._start;
@@ -101,10 +117,11 @@ UniqueObjectIdPool.prototype = {
     if (this._free.length > 0 && this._usedCount === 0) {
       this.clear();
     }
-  },
-  objectForId : function(id) {
+  }
+
+  objectForId(id: number): T | undefined {
     return this._objects[id];
   }
-};
+}
 
 export default UniqueObjectIdPool;
