@@ -15,4 +15,9 @@ export default defineConfig({
     },
     sourcemap: true,
   },
+  test: {
+    environment: 'node',
+    include: ['src/tests/**/*.test.js'],
+    setupFiles: ['./src/tests/xhr-node-shim.js'],
+  },
 });

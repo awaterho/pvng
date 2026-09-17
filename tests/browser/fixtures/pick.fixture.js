@@ -1,5 +1,8 @@
-require(['viewer', 'io', 'color', 'gl-matrix'], 
-        function(pv, io, color, glMatrix) { 
+import { test } from '../shim.js';
+import pv from '../../../src/viewer.js';
+import io from '../../../src/io.js';
+import color from '../../../src/color.js';
+import glMatrix from '../../../src/gl-matrix.js';
 
 var mat4 = glMatrix.mat4;
 
@@ -59,8 +62,6 @@ test('pick nothing', function(assert) {
   // use a point that does not have an object beneath.
   var picked = viewer.pick( { x: 50, y : 50 });
   assert.strictEqual(picked, null);
-});
-
 });
 
 

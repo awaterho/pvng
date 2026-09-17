@@ -1,4 +1,5 @@
-require(['mol/all'], function(mol) {
+import { test, strictEqual } from '../helpers.js';
+import mol from '../../mol/all.js';
 
 function makeSimpleMolecule() {
   var m = new mol.Mol();
@@ -70,6 +71,4 @@ test("eachResidue breaks when returning false", function() {
     m.eachResidue(iter);
     strictEqual(counter, stopAt);
   }
-});
-
 });

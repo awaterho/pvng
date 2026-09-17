@@ -26,8 +26,18 @@ export default tseslint.config(
     },
   },
   {
-    // src/tests/** still uses the old AMD/QUnit test harness; it will be
-    // rewritten as part of the Vitest/Playwright test migration.
-    ignores: ['dist/**', 'node_modules/**', 'js/**', 'doc/**', 'src/tests/**'],
+    // *.test.js and tests/browser/fixtures/** are mechanically-ported QUnit
+    // test bodies (kept byte-for-byte identical to the originals apart from
+    // the module wrapper); their pre-existing quality issues are left for a
+    // later pass rather than papered over here.
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'js/**',
+      'doc/**',
+      'snippets/**',
+      'src/tests/**/*.test.js',
+      'tests/browser/fixtures/**',
+    ],
   },
 );

@@ -1,4 +1,7 @@
-require(['viewer', 'io', 'color'], function(pv, io, color) { 
+import { test } from '../shim.js';
+import pv from '../../../src/viewer.js';
+import io from '../../../src/io.js';
+import color from '../../../src/color.js';
 
 function createViewer() {
   var options =  {
@@ -227,8 +230,6 @@ test('set opacity on mesh geom with atom assoc on structural subset',
       viewer.destroy();
       done();
   });
-});
-
 });
 
 

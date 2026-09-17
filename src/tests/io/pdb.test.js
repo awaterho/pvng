@@ -1,4 +1,6 @@
-define(['gl-matrix', 'io'], function(glMatrix, io) {
+import { test, strictEqual, deepEqual } from '../helpers.js';
+import glMatrix from '../../gl-matrix.js';
+import io from '../../io.js';
 
 
 var mat4 = glMatrix.mat4;
@@ -214,6 +216,4 @@ test('only load first model when loadAllModels option is not set', function(asse
     assert.strictEqual(structure.chain('A').residueByRnum(19).ss(),  'H');
     done();
   });
-});
-
 });

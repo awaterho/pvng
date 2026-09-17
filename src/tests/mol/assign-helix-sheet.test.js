@@ -1,4 +1,6 @@
-require(['mol/all', 'io'], function(mol, io) {
+import { test } from '../helpers.js';
+import mol from '../../mol/all.js';
+import io from '../../io.js';
 
 test('assign helix sheet', function(assert) {
   var done = assert.async();
@@ -16,6 +18,4 @@ test('assign helix sheet', function(assert) {
     assert.strictEqual(assigned, expected);
     done();
   });
-});
-
 });

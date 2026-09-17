@@ -1,4 +1,6 @@
-define(['gl-matrix', 'io'], function(glMatrix, io) {
+import { test } from '../helpers.js';
+import glMatrix from '../../gl-matrix.js';
+import io from '../../io.js';
 
 
 var SIMPLE_SDF = [
@@ -177,6 +179,4 @@ test('reads simple SDF file', function(assert) {
   assert.strictEqual(atoms[5].element(), 'Cl');
   assert.vec3Equal(atoms[5].pos(), [-1.0, -1.0, 0.0]);
   assert.strictEqual(atoms[5].bonds().length, 1);
-});
-
 });

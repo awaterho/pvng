@@ -1,4 +1,5 @@
-require(['utils'], function(utils) { 
+import { test, strictEqual } from './helpers.js';
+import utils from '../utils.js';
 
 test("binary search", function() {
   var VALUES = [1,2,4,6,10,20,21,22,23];
@@ -122,6 +123,4 @@ test("index of last smaller equal than", function() {
   strictEqual(utils.indexLastSmallerEqualThan(VALUES3,  4), 1);
   strictEqual(utils.indexLastSmallerEqualThan(VALUES3,  5), 2);
   strictEqual(utils.indexLastSmallerEqualThan(VALUES3,  6), 2);
-});
-
 });

@@ -1,4 +1,5 @@
-require(['color'], function(color) { 
+import { test, strictEqual } from './helpers.js';
+import color from '../color.js';
 
 function compareColor(lhs, rhs) {
   strictEqual(lhs[0], rhs[0]);
@@ -31,6 +32,4 @@ test("force rgb from color names", function() {
   var red = [1.0, 0.0, 0.0];
   compareColor([1.0, 0.0, 0.0], color.forceRGB('red'));
   compareColor([1.0, 1.0, 0.0], color.forceRGB('yellow'));
-});
-
 });

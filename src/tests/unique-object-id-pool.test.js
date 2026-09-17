@@ -1,4 +1,5 @@
-require(['unique-object-id-pool'], function(UniqueObjectIdPool) { 
+import { test } from './helpers.js';
+import UniqueObjectIdPool from '../unique-object-id-pool.js';
 
 test("simple continuous range", function(assert) {
   var idPool = new UniqueObjectIdPool();
@@ -18,6 +19,4 @@ test("clear free ranges in case there are not enough ids", function(assert) {
   range.recycle();
   range = idPool.getContinuousRange(65536);
   assert.ok(range !== null);
-});
-
 });

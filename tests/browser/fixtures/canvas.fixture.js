@@ -1,4 +1,5 @@
-require(['gfx/canvas', ], function(canvas) { 
+import { test } from '../shim.js';
+import canvas from '../../../src/gfx/canvas.js';
 
 function createCanvas(width, height, antialias, forceManualAntialiasing) {
   var options =  {
@@ -101,8 +102,6 @@ test('resize with antialiasing',
   assert.strictEqual(canvas.height(), 200);
   assert.strictEqual(canvas.viewportWidth(), 100 * sf);
   assert.strictEqual(canvas.viewportHeight(), 200 * sf);
-});
-
 });
 
 

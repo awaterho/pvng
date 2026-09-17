@@ -1,4 +1,7 @@
-require(['viewer', 'io', 'color'], function(pv, io, color) { 
+import { test } from '../shim.js';
+import pv from '../../../src/viewer.js';
+import io from '../../../src/io.js';
+import color from '../../../src/color.js';
 
 var ALL_STYLES = [
   'cartoon', 'tube', 'lines', 'spheres', 'ballsAndSticks',
@@ -168,8 +171,6 @@ test('renders custom meshes', function(assert) {
     viewer.destroy();
     done();
   }, 100);
-});
-
 });
 
 

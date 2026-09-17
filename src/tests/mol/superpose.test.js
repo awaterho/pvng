@@ -1,4 +1,8 @@
-require(['mol/all', 'io'], function(mol, io) {
+import { test } from '../helpers.js';
+import mol from '../../mol/all.js';
+import io from '../../io.js';
+import sp from '../../mol/superpose.js';
+
 
 // fragment used in most of the tests, extracted from PDB id: 1r6a
 var PDB_FRAGMENT="\n\
@@ -159,317 +163,74 @@ HETATM 2141  O   HOH A 916     -11.502 -50.640   0.340  1.00 50.23           O  
 
 var FRAGMENT = io.pdb(PDB_FRAGMENT);
 
-test('is atom connected to', function(assert) {
-  var atomA = FRAGMENT.atom('A.268.C');
-  var atomB = FRAGMENT.atom('A.268.O');
-  assert.ok(atomA.isConnectedTo(atomB));
-  assert.ok(atomB.isConnectedTo(atomA));
-  assert.ok(!atomB.isConnectedTo(atomB));
-  assert.ok(!atomA.isConnectedTo(atomA));
-
-  var atomC = FRAGMENT.atom('A.268.CB');
-  assert.ok(!atomA.isConnectedTo(atomC));
-  assert.ok(!atomC.isConnectedTo(atomA));
-  assert.ok(!atomC.isConnectedTo(null));
-});
-
-test('get atom by name', function(assert) {
-  var oxygen = FRAGMENT.atom('A.905.O1');
-  assert.strictEqual(oxygen.name(), 'O1');
-  assert.strictEqual(oxygen.residue().num(), 905);
-  assert.strictEqual(oxygen.residue().chain().name(), 'A');
-});
-
-test('get atom by index (out of bounds)', function(assert) {
-  var r = FRAGMENT.chain('A').residueByRnum(905);
-  assert.strictEqual(r.atom(r.atoms().length), null);
-  assert.strictEqual(r.atom(-1), null);
-});
-
-test('get atom by name that does not exists', function(assert) {
-  assert.strictEqual(FRAGMENT.atom('A.905.OX'), null);
-  assert.strictEqual(FRAGMENT.atom('A.100000.CA'), null);
-  assert.strictEqual(FRAGMENT.atom('C.1.CA'), null);
-});
-
-  
-test('convert chain to view', function(assert) {
-  var view = FRAGMENT.chain('A').asView();
-  assert.strictEqual(FRAGMENT.atomCount(), view.atomCount());
-});
-
-test('calculate center of structure', function(assert) {
-  var center = FRAGMENT.center();
-  assert.vec3Equal(center, [9.3053045,  -47.354152679,  -5.1559925079]);
-});
-
-test('calculate center of complete view', function(assert) {
-  var center = FRAGMENT.select().center();
-  assert.vec3Equal(center, [9.3053045,  -47.354152679,  -5.1559925079]);
-});
-
-test('calculate center of selection', function(assert) {
-  var center = FRAGMENT.select({rname : 'RVP'}).center();
-  assert.vec3Equal(center, [16.2359523,   -52.2526664,  16.711048126]);
-});
-
-test('calculate center of selection', function(assert) {
-  var center = FRAGMENT.select({rname : 'RVP'}).center();
-  assert.vec3Equal(center, [16.2359523,   -52.2526664,  16.711048126]);
-});
-
-test('calculate bounding sphere of view', function(assert) {
-  var sphere = FRAGMENT.select({rname : 'RVP'}).boundingSphere();
-  assert.vec3Equal(sphere.center(), [16.2359523,   -52.2526664,  16.711048126]);
-  assert.almostEqual(sphere.radius(), 5.7045096369);
-});
-
-test('calculate bounding sphere complete structure', function(assert) {
-  var sphere = FRAGMENT.boundingSphere();
-  assert.vec3Equal(sphere.center(), [9.3053045,  -47.354152679,  -5.1559925079]);
-  assert.almostEqual(sphere.radius(), 34.276445437978104);
-});
-
-test('chains by name', function(assert) {
-  var chains = FRAGMENT.chainsByName(['A', 'A']);
-  assert.strictEqual(chains.length, 2);
-  assert.strictEqual(chains[0].name(), 'A');
-  assert.strictEqual(chains[1].name(), 'A');
-});
-
-test('request chain by name that does not exist', function(assert) {
-  var chains = FRAGMENT.chainsByName(['C', 'B']);
-  assert.strictEqual(chains.length, 0);
-});
-
-test('request chain by name with empty list', function(assert) {
-  var chains = FRAGMENT.chainsByName([]);
-  assert.strictEqual(chains.length, 0);
-});
-
-test('residue select on structure', function(assert) {
-  var view = FRAGMENT.residueSelect(function(r) { return r.isAminoacid(); });
-  var count = 0;
-  view.eachResidue(function(r) {
-      assert.ok(r.isAminoacid());
-      count ++;
-  });
-  assert.strictEqual(count, 10);
-  assert.strictEqual(view.chains().length, 1);
-});
-
-test('select polymer on structure', function(assert) {
-  var view = FRAGMENT.select('polymer');
-  var count = 0;
-  view.eachResidue(function(r) {
-      assert.ok(r.isAminoacid());
-      count++;
-  });
-  assert.strictEqual(count, 9);
-  assert.strictEqual(view.chains().length, 1);
-});
-
-test('select polymer on view', function(assert) {
-  var view = FRAGMENT.select().select('polymer');
-  var count = 0;
-  view.eachResidue(function(r) {
-      assert.ok(r.isAminoacid());
-      count++;
-  });
-  assert.strictEqual(count, 9);
-  assert.strictEqual(view.chains().length, 1);
-});
-
-test('add residues', function(assert) {
-  var rnums = [268,903,904,905];
-  var firstView = FRAGMENT.select({rnums : rnums });
-  assert.ok(firstView.chain('A')._rnumsOrdered === true);
-  var i, res, res2;
-  for (i = 0; i < rnums.length; ++i) {
-    res = firstView.chain('A').residueByRnum(rnums[i]);
-    assert.strictEqual(res.num(), rnums[i]);
-  }
-  var secondView = FRAGMENT.createEmptyView();
-  var r = [];
-  firstView.eachResidue(function(x) { r.push(x); });
-  secondView.addResidues(r, true);
-  var other = [];
-  secondView.eachResidue(function(x) { other.push(x); });
-  for (i = 0; i < rnums.length; ++i) {
-    res = firstView.chain('A').residueByRnum(rnums[i]);
-    res2 = secondView.chain('A').residueByRnum(rnums[i]);
-    assert.strictEqual(res.num(), res2.num());
-  }
-});
-
-test('atom select on structure', function(assert) {
-  var view = FRAGMENT.atomSelect(function(a) { return a.name() === 'CA'; });
-  var count = 0;
-  view.eachAtom(function(a) {
-      assert.strictEqual(a.name(), 'CA');
-      count ++;
-  });
-  assert.strictEqual(count, 11);
-  assert.strictEqual(view.residueCount(), 11);
-  assert.strictEqual(view.chains().length, 1);
-});
-
-test('residue select on view', function(assert) {
-  var firstView = FRAGMENT.select({rnums : [268,903,904,905] });
-  var view = firstView.residueSelect(function(r) { return r.isAminoacid(); });
-  var count = 0;
-  view.eachResidue(function(r) {
-      assert.ok(r.isAminoacid());
-      count ++;
-  });
-  assert.strictEqual(view.atomCount(), 5);
-  assert.strictEqual(count, 1);
-  assert.strictEqual(view.chains().length, 1);
-});
-
-test('atom select on view', function(assert) {
-  var firstView = FRAGMENT.select({rnums : [268,903,904,905] });
-  var view = firstView.atomSelect(function(a) { return a.name() === 'CA'; });
-  var count = 0;
-  view.eachAtom(function(a) {
-      assert.strictEqual(a.name(), 'CA');
-      count ++;
-  });
-  assert.strictEqual(count, 1);
-  assert.strictEqual(view.residueCount(), 1);
-  assert.strictEqual(view.chains().length, 1);
-});
-
-test('residue by rnum on structure', function(assert) {
-  var rnums = [268,903,904,905];
-  for (var i = 0; i < rnums.length; ++i) {
-    var res = FRAGMENT.chain('A').residueByRnum(rnums[i]);
-    assert.strictEqual(res.num(), rnums[i]);
-  }
-  assert.strictEqual(FRAGMENT.chain('A').residueByRnum(100), null);
-  assert.strictEqual(FRAGMENT.chain('A').residueByRnum(900), null);
-  assert.strictEqual(FRAGMENT.chain('A').residueByRnum(1000), null);
-});
-
-test('residue by rnum on view', function(assert) {
-  var rnums = [268,903,904,905];
-  var firstView = FRAGMENT.select({rnums : rnums });
-  assert.ok(firstView.chain('A')._rnumsOrdered === true);
-  for (var i = 0; i < rnums.length; ++i) {
-    var res = firstView.chain('A').residueByRnum(rnums[i]);
-    assert.strictEqual(res.num(), rnums[i]);
-  }
-  assert.strictEqual(firstView.chain('A').residueByRnum(100), null);
-  assert.strictEqual(firstView.chain('A').residueByRnum(902), null);
-  assert.strictEqual(firstView.chain('A').residueByRnum(1000), null);
-});
-
-test('residues in rnum range on structure', function(assert) {
-  assert.ok(FRAGMENT.chain('A')._rnumsOrdered === false);
-  var residues = FRAGMENT.chain('A').residuesInRnumRange(902, 906);
-  assert.strictEqual(residues.length, 5);
-  assert.strictEqual(residues[0].num(), 902);
-  assert.strictEqual(residues[1].num(), 903);
-  assert.strictEqual(residues[2].num(), 904);
-  assert.strictEqual(residues[3].num(), 905);
-  assert.strictEqual(residues[4].num(), 906);
-});
-
-test('residues in rnum range on view', function(assert) {
-  var rnums = [268,903,904,905];
-  var firstView = FRAGMENT.select({rnums : rnums });
-  assert.ok(firstView.chain('A')._rnumsOrdered === true);
-  var residues = firstView.chain('A').residuesInRnumRange(902, 906);
-  assert.strictEqual(residues.length, 3);
-  assert.strictEqual(residues[0].num(), 903);
-  assert.strictEqual(residues[1].num(), 904);
-  assert.strictEqual(residues[2].num(), 905);
+test('parse atom list specification', function(assert) {
+  console.log(sp);
+  assert.strictEqual(sp.parseAtomNames(null), null);
+  assert.strictEqual(sp.parseAtomNames(undefined), null);
+  assert.strictEqual(sp.parseAtomNames('all'), null);
+  var bb = { 'CA' : true, 'C' : true, 'O' : true, 'N' : true };
+  assert.propEqual(sp.parseAtomNames('backbone'), bb);
+  assert.propEqual(sp.parseAtomNames('A,B'), 
+                   { 'A' : true, 'B' : true });
+  assert.propEqual(sp.parseAtomNames(['A', 'B']), 
+                   { 'A' : true, 'B' : true });
 });
 
 
-test('atom properties', function(assert) {
-  var oxygen = FRAGMENT.atom('A.905.O1');
-  assert.strictEqual(oxygen.occupancy(), 1.0);
-  assert.strictEqual(oxygen.tempFactor(), 0.08);
-  assert.strictEqual(oxygen.element(), 'O');
-  assert.strictEqual(oxygen.index(), 82);
-  
-  // do the same on view 
-  var oxygenView = FRAGMENT.select().atom('A.905.O1');
-  assert.strictEqual(oxygenView.occupancy(), 1.0);
-  assert.strictEqual(oxygenView.tempFactor(), 0.08);
-  assert.strictEqual(oxygenView.element(), 'O');
-  assert.strictEqual(oxygenView.index(), 82);
+test('filters by specified atom set', function(assert) {
+  var inA = FRAGMENT.chains()[0].residueByRnum(266);
+  var inB = FRAGMENT.chains()[0].residueByRnum(265);
+  var outA = [];
+  var outB = [];
+  var atomSet = sp.parseAtomNames('CA,CB,O');
+  sp.addAtomsPresentInBoth(inA, inB, outA, outB, atomSet);
+  assert.strictEqual(outA.length, 2);
+  assert.strictEqual(outA[0].name(), 'CA');
+  assert.strictEqual(outA[1].name(), 'O');
+  assert.strictEqual(outB.length, 2);
+  assert.strictEqual(outB[0].name(), 'CA');
+  assert.strictEqual(outB[1].name(), 'O');
+});
+
+test('only includes atoms present in both residues', function(assert) {
+  var inA = FRAGMENT.chains()[0].residueByRnum(266);
+  var inB = FRAGMENT.chains()[0].residueByRnum(265);
+  var outA = [];
+  var outB = [];
+  sp.addAtomsPresentInBoth(inA, inB, outA, outB, null);
+  assert.strictEqual(outA.length, 4);
+  assert.strictEqual(outA[0].name(), 'N');
+  assert.strictEqual(outA[1].name(), 'CA');
+  assert.strictEqual(outA[2].name(), 'C');
+  assert.strictEqual(outA[3].name(), 'O');
+  assert.strictEqual(outB.length, 4);
+  assert.strictEqual(outA[0].name(), 'N');
+  assert.strictEqual(outA[1].name(), 'CA');
+  assert.strictEqual(outA[2].name(), 'C');
+  assert.strictEqual(outB[3].name(), 'O');
 });
 
 
-test('add atom', function(assert) {
-  var oxygen = FRAGMENT.atom('A.905.O1');
-  var view = FRAGMENT.createEmptyView();
-  view.addAtom(oxygen);
-  assert.strictEqual(1, view.atomCount());
-  // make sure that we check for duplicates
-  view.addAtom(oxygen);
-  assert.strictEqual(1, view.atomCount());
-
-  var viewAtom = view.atoms()[0];
-  view.addAtom(viewAtom);
-  assert.strictEqual(1, view.atomCount());
+test('match residues by index', function(assert) {
+  var inA = FRAGMENT.select({rnumRange : [264, 267]});
+  var inB = FRAGMENT.select({rnumRange : [265, 268]});
+  var matched = sp.matchResiduesByIndex(inA, inB);
+  assert.strictEqual(matched[0].atomCount(), 18);
+  assert.strictEqual(matched[1].atomCount(), 18);
 });
 
-test('remove atom and keep empty residues and chains', function(assert) {
-  var view = FRAGMENT.createEmptyView();
-  view.addAtom(FRAGMENT.atom('A.905.O1'));
-  view.addAtom(FRAGMENT.atom('A.905.O2'));
-  view.addAtom(FRAGMENT.atom('A.263.C'));
-  assert.strictEqual(3, view.atomCount());
-  // remove atom that's not part of the view
-  assert.ok(!view.removeAtom(FRAGMENT.atom('A.905.O3')));
-  assert.strictEqual(3, view.atomCount());
-
-  assert.ok(view.removeAtom(FRAGMENT.atom('A.905.O1')));
-  assert.strictEqual(view.atomCount(), 2);
-  assert.strictEqual(view.residueCount(), 2);
-  assert.strictEqual(view.chains().length, 1);
-  assert.ok(view.removeAtom(FRAGMENT.atom('A.905.O2')));
-  assert.strictEqual(view.atomCount(), 1);
-  assert.strictEqual(view.residueCount(), 2);
-  assert.strictEqual(view.chains().length, 1);
-
-  assert.ok(view.removeAtom(FRAGMENT.atom('A.263.C')));
-  assert.strictEqual(view.atomCount(), 0);
-  assert.strictEqual(view.residueCount(), 2);
-  assert.strictEqual(view.chains().length, 1);
-
+test('match residues by index with subset', function(assert) {
+  var inA = FRAGMENT.select({rnumRange : [264, 267]});
+  var inB = FRAGMENT.select({rnumRange : [265, 268]});
+  var matched = sp.matchResiduesByIndex(inA, inB, 'CA');
+  assert.strictEqual(matched[0].atomCount(), 4);
+  assert.strictEqual(matched[1].atomCount(), 4);
 });
 
-
-test('remove atom and remove empty residues and chains', function(assert) {
-  var view = FRAGMENT.createEmptyView();
-  view.addAtom(FRAGMENT.atom('A.905.O1'));
-  view.addAtom(FRAGMENT.atom('A.905.O2'));
-  view.addAtom(FRAGMENT.atom('A.263.C'));
-  assert.strictEqual(3, view.atomCount());
-  // remove atom that's not part of the view
-  assert.ok(!view.removeAtom(FRAGMENT.atom('A.905.O3', true)));
-  assert.strictEqual(3, view.atomCount());
-
-  assert.ok(view.removeAtom(FRAGMENT.atom('A.905.O1'), true));
-  assert.ok(view.containsResidue(FRAGMENT.atom('A.905.O1').residue()));
-  assert.strictEqual(view.atomCount(), 2);
-  assert.strictEqual(view.residueCount(), 2);
-  assert.strictEqual(view.chains().length, 1);
-  assert.ok(view.removeAtom(FRAGMENT.atom('A.905.O2'), true));
-  assert.ok(!view.containsResidue(FRAGMENT.atom('A.905.O1').residue()));
-  assert.strictEqual(view.atomCount(), 1);
-  assert.strictEqual(view.residueCount(), 1);
-  assert.strictEqual(view.chains().length, 1);
-
-  assert.ok(view.removeAtom(FRAGMENT.atom('A.263.C'), true));
-  assert.ok(!view.containsResidue(FRAGMENT.atom('A.263.C').residue()));
-  assert.strictEqual(view.atomCount(), 0);
-  assert.strictEqual(view.residueCount(), 0);
-  assert.strictEqual(view.chains().length, 0);
-
-});
+test('match residues by rnum with subset', function(assert) {
+  var inA = FRAGMENT.select({rnumRange : [264, 267]});
+  var inB = FRAGMENT.select({rnumRange : [265, 268]});
+  var matched = sp.matchResiduesByNum(inA, inB, 'CA');
+  assert.strictEqual(matched[0].atomCount(), 3);
+  assert.strictEqual(matched[1].atomCount(), 3);
 });

@@ -1,4 +1,5 @@
-define(['io'], function(io) { 
+import { test } from '../helpers.js';
+import io from '../../io.js';
 
 var SELECT_HETATM='\
 ATOM   3316  C   GLY B 214      24.173   7.911  -3.276  1.00 94.23           C\n\
@@ -200,7 +201,4 @@ test('select within applied to view returns only subset of view atoms',
   assert.strictEqual(atoms.length, 2);
   assert.strictEqual(atoms[0].qualifiedName(), 'A.ASN12.CA');
   assert.strictEqual(atoms[1].qualifiedName(), 'A.PHE13.CA');
-});
-
-
 });

@@ -17,3 +17,6 @@ build
 dist
 .ipynb_checkpoints
 .idea/workspace.xml
+test-results
+playwright-report
+*.tsbuildinfo
