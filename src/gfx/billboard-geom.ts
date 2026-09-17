@@ -30,7 +30,7 @@ interface ShaderCatalog {
 // NOTE: kept as a prototype-based constructor function -- see
 // gfx/vertex-array-base.ts/gfx/base-geom.ts for why (this chain-invokes
 // MeshGeom via `.call()`).
-type BillboardGeom = IMeshGeom;
+export type BillboardGeom = IMeshGeom;
 
 interface BillboardGeomConstructor {
   new (gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: unknown): BillboardGeom;

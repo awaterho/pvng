@@ -46,7 +46,7 @@ interface LGChain {
 // NOTE: kept as a prototype-based constructor function -- see
 // gfx/vertex-array-base.ts/gfx/base-geom.ts for why (this chain-invokes
 // BaseGeom via `.call()`).
-interface LineGeom extends IBaseGeom {
+export interface LineGeom extends IBaseGeom {
   _vertArrays: LineChainData[];
   _float32Allocator: unknown;
   _lineWidth: number;

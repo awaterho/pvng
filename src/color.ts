@@ -160,7 +160,7 @@ type ColorFunc = (this: ColorOp, atom: ColorAtom, out: Float32Array | number[], 
 type BeginFunc = ((this: ColorOp, obj: ColorObj) => void) | null;
 type EndFunc = ((this: ColorOp) => void) | null;
 
-class ColorOp {
+export class ColorOp {
   colorFor: ColorFunc;
   private _beginFunc: BeginFunc;
   private _endFunc: EndFunc;
