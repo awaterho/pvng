@@ -17,16 +17,55 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import utils from '../utils';
 import VertexArrayBase from './vertex-array-base';
 
+interface Shader extends WebGLProgram {
+  posAttrib: number;
+  colorAttrib: number;
+  objIdAttrib: number;
+  selectAttrib: number;
+}
+
+// NOTE: kept as a prototype-based constructor function, not a real ES class
+// -- see gfx/vertex-array-base.ts for why (gfx/chain-data.js, not yet
+// converted, chain-invokes this via `VertexArray.call(this, ...)`).
+//
 // (unindexed) vertex array for line-based geometries
-function VertexArray(gl, numVerts, float32Allocator)  {
-  VertexArrayBase.call(this, gl, numVerts, float32Allocator);
+interface VertexArray extends VertexArrayBase {
+  _numVerts: number;
+  _primitiveType: number;
+  _POS_OFFSET: number;
+  _ID_OFFSET: number;
+
+  setDrawAsPoints(enable: boolean): void;
+  addPoint(pos: ArrayLike<number>, color: ArrayLike<number>, id: number): void;
+  addLine(
+    startPos: ArrayLike<number>, startColor: ArrayLike<number>,
+    endPos: ArrayLike<number>, endColor: ArrayLike<number>,
+    idOne: number, idTwo: number,
+  ): void;
+  bindAttribs(shader: Shader): void;
+  releaseAttribs(shader: Shader): void;
+  bind(shader: Shader): void;
+  draw(): void;
+}
+
+interface VertexArrayConstructor {
+  new (gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown): VertexArray;
+  (this: VertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown): void;
+  prototype: VertexArray;
+}
+
+const VertexArray = function(
+  this: VertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown,
+) {
+  (VertexArrayBase as unknown as (
+    this: VertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown
+  ) => void).call(this, gl, numVerts, float32Allocator);
   this._numVerts = 0;
   this._primitiveType = this._gl.LINES;
-}
+} as unknown as VertexArrayConstructor;
 
 utils.derive(VertexArray, VertexArrayBase, {
 
@@ -36,9 +75,9 @@ utils.derive(VertexArray, VertexArrayBase, {
   _ID_OFFSET : 7,
   _SELECT_OFFSET : 8,
 
-  numVerts : function() { return this._numVerts; },
+  numVerts: function(this: VertexArray) { return this._numVerts; },
 
-  setDrawAsPoints : function(enable) {
+  setDrawAsPoints: function(this: VertexArray, enable: boolean): void {
     if (enable) {
       this._primitiveType = this._gl.POINTS;
     } else {
@@ -46,15 +85,15 @@ utils.derive(VertexArray, VertexArrayBase, {
     }
   },
 
-  addPoint : function(pos, color, id) {
-    var index = this._FLOATS_PER_VERT * this._numVerts;
-    this._vertData[index++] = pos[0];
-    this._vertData[index++] = pos[1];
-    this._vertData[index++] = pos[2];
-    this._vertData[index++] = color[0];
-    this._vertData[index++] = color[1];
-    this._vertData[index++] = color[2];
-    this._vertData[index++] = color[3];
+  addPoint: function(this: VertexArray, pos: ArrayLike<number>, color: ArrayLike<number>, id: number): void {
+    let index = this._FLOATS_PER_VERT * this._numVerts;
+    this._vertData[index++] = pos[0]!;
+    this._vertData[index++] = pos[1]!;
+    this._vertData[index++] = pos[2]!;
+    this._vertData[index++] = color[0]!;
+    this._vertData[index++] = color[1]!;
+    this._vertData[index++] = color[2]!;
+    this._vertData[index++] = color[3]!;
     this._vertData[index++] = id;
     this._vertData[index++] = 0.0;
     this._numVerts += 1;
@@ -62,13 +101,16 @@ utils.derive(VertexArray, VertexArrayBase, {
     this._boundingSphere = null;
   },
 
-  addLine : function(startPos, startColor, endPos, endColor, idOne, idTwo) {
+  addLine: function(
+    this: VertexArray, startPos: ArrayLike<number>, startColor: ArrayLike<number>,
+    endPos: ArrayLike<number>, endColor: ArrayLike<number>, idOne: number, idTwo: number,
+  ): void {
     this.addPoint(startPos, startColor, idOne);
     this.addPoint(endPos, endColor, idTwo);
   },
 
 
-  bindAttribs : function(shader) {
+  bindAttribs: function(this: VertexArray, shader: Shader): void {
     this._gl.vertexAttribPointer(shader.posAttrib, 3, this._gl.FLOAT, false,
                                   this._FLOATS_PER_VERT * 4,
                                   this._POS_OFFSET * 4);
@@ -86,14 +128,14 @@ utils.derive(VertexArray, VertexArrayBase, {
       this._gl.enableVertexAttribArray(shader.objIdAttrib);
     }
     if (shader.selectAttrib !== -1) {
-      this._gl.vertexAttribPointer(shader.selectAttrib, 1, this._gl.FLOAT, 
+      this._gl.vertexAttribPointer(shader.selectAttrib, 1, this._gl.FLOAT,
                                    false, this._FLOATS_PER_VERT * 4,
                                    this._SELECT_OFFSET * 4);
       this._gl.enableVertexAttribArray(shader.selectAttrib);
     }
   },
 
-  releaseAttribs : function(shader) {
+  releaseAttribs: function(this: VertexArray, shader: Shader): void {
     this._gl.disableVertexAttribArray(shader.posAttrib);
     if (shader.colorAttrib !== -1) {
       this._gl.disableVertexAttribArray(shader.colorAttrib); }
@@ -105,16 +147,16 @@ utils.derive(VertexArray, VertexArrayBase, {
     }
   },
 
-  bind : function(shader) {
+  bind: function(this: VertexArray, shader: Shader): void {
     this.bindBuffers();
     this.bindAttribs(shader);
   },
 
-  // draws all triangles contained in the indexed vertex array using the 
+  // draws all triangles contained in the indexed vertex array using the
   // provided shader.
-  draw : function() {
+  draw: function(this: VertexArray): void {
     this._gl.drawArrays(this._primitiveType, 0, this._numVerts);
   }
-});
+} as Partial<VertexArray>);
 
 export default VertexArray;
