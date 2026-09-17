@@ -17,28 +17,51 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
+import { vec3, vec4, mat3, mat4 } from 'gl-matrix';
 
-import * as glMatrix from 'gl-matrix';
+// canvas.ts (not yet converted) stashes the viewport size directly on the
+// GL context object.
+type GLWithViewport = WebGLRenderingContext & {
+  viewportWidth: number;
+  viewportHeight: number;
+};
 
-var vec3 = glMatrix.vec3;
-var vec4 = glMatrix.vec4;
-var mat4 = glMatrix.mat4;
+// Structural typing for the compiled shader program object (canvas.ts's
+// initShader, not yet converted): the various uniform locations Cam.bind()
+// sets every frame, plus the per-shader state-change-tracking stateId.
+interface ShaderProgram extends WebGLProgram {
+  modelview: WebGLUniformLocation;
+  projection: WebGLUniformLocation;
+  rotation: WebGLUniformLocation | null;
+  fog: WebGLUniformLocation;
+  fogFar: WebGLUniformLocation;
+  fogNear: WebGLUniformLocation;
+  fogColor: WebGLUniformLocation;
+  zoom: WebGLUniformLocation;
+  outlineColor: WebGLUniformLocation;
+  selectionColor: WebGLUniformLocation;
+  relativePixelSize: WebGLUniformLocation;
+  outlineWidth: WebGLUniformLocation;
+  screenDoorTransparency: WebGLUniformLocation;
+  outlineEnabled: WebGLUniformLocation;
+  stateId: number;
+}
 
 // gl-matrix v3 dropped mat4.fromMat3 (present in the v2.2.0 this code was
 // originally written against); this reproduces its exact behavior: copy a
 // mat3 into the upper-left 3x3 of an identity mat4.
-function mat4FromMat3(out, a) {
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
+function mat4FromMat3(out: mat4, a: mat3): mat4 {
+  out[0] = a[0]!;
+  out[1] = a[1]!;
+  out[2] = a[2]!;
   out[3] = 0;
-  out[4] = a[3];
-  out[5] = a[4];
-  out[6] = a[5];
+  out[4] = a[3]!;
+  out[5] = a[4]!;
+  out[6] = a[5]!;
   out[7] = 0;
-  out[8] = a[6];
-  out[9] = a[7];
-  out[10] = a[8];
+  out[8] = a[6]!;
+  out[9] = a[7]!;
+  out[10] = a[8]!;
   out[11] = 0;
   out[12] = 0;
   out[13] = 0;
@@ -47,12 +70,12 @@ function mat4FromMat3(out, a) {
   return out;
 }
 
-function floatArraysAreEqual(lhs, rhs) {
+function floatArraysAreEqual(lhs: ArrayLike<number>, rhs: ArrayLike<number>): boolean {
   if (lhs.length !== rhs.length) {
     return false;
   }
-  for (var i = 0; i < lhs.length; ++i) {
-    if (Math.abs(lhs[i] - rhs[i]) > 0.000001) {
+  for (let i = 0; i < lhs.length; ++i) {
+    if (Math.abs(lhs[i]! - rhs[i]!) > 0.000001) {
       return false;
     }
   }
@@ -61,136 +84,173 @@ function floatArraysAreEqual(lhs, rhs) {
 
 // A camera, providing us with a view into the 3D worlds. Handles projection,
 // and modelview matrices and controls the global render parameters such as
-  // shader and fog.
-function Cam(gl) {
-  this._projection = mat4.create();
-  this._camModelView = mat4.create();
-  this._modelView = mat4.create();
-  this._rotation = mat4.create();
-  this._translation = mat4.create();
-  this._near = 0.10;
-  this._onCameraChangedListeners = [];
-  this._far = 4000.0;
-  this._fogNear = -5;
-  this._fogFar = 50;
-  this._fog = true;
-  this._fovY = Math.PI * 45.0 / 180.0;
-  this._fogColor = vec3.fromValues(1, 1, 1);
-  this._outlineColor = vec3.fromValues(0.1, 0.1, 0.1);
-  this._outlineWidth = 1.0;
-  this._outlineEnabled = true;
-  this._selectionColor = vec4.fromValues(0.1, 1.0, 0.1, 0.7);
-  this._center = vec3.create();
-  this._zoom = 50;
-  this._screenDoorTransparency = false;
-  this._updateProjectionMat = true;
-  this._updateModelViewMat = true;
-  this._upsamplingFactor = 1;
-  this._gl = gl;
-  this._currentShader = null;
-  this._stateId = 0;
-  this.setViewportSize(gl.viewportWidth, gl.viewportHeight);
-}
+// shader and fog.
+class Cam {
+  private _projection: mat4;
+  private _camModelView: mat4;
+  private _modelView: mat4;
+  private _rotation: mat4;
+  private _translation: mat4;
+  private _near: number;
+  private _onCameraChangedListeners: ((cam: Cam) => void)[];
+  private _far: number;
+  private _fogNear: number;
+  private _fogFar: number;
+  private _fog: boolean;
+  private _fovY: number;
+  private _fogColor: vec3;
+  private _outlineColor: vec3;
+  private _outlineWidth: number;
+  private _outlineEnabled: boolean;
+  private _selectionColor: vec4;
+  private _center: vec3;
+  private _zoom: number;
+  private _screenDoorTransparency: boolean;
+  private _updateProjectionMat: boolean;
+  private _updateModelViewMat: boolean;
+  private _upsamplingFactor: number;
+  private _gl: GLWithViewport;
+  private _currentShader: ShaderProgram | null;
+  private _stateId: number;
+  private _width!: number;
+  private _height!: number;
+  private _relativePixelSize!: Float32Array;
 
-Cam.prototype = {
+  constructor(gl: GLWithViewport) {
+    this._projection = mat4.create();
+    this._camModelView = mat4.create();
+    this._modelView = mat4.create();
+    this._rotation = mat4.create();
+    this._translation = mat4.create();
+    this._near = 0.10;
+    this._onCameraChangedListeners = [];
+    this._far = 4000.0;
+    this._fogNear = -5;
+    this._fogFar = 50;
+    this._fog = true;
+    this._fovY = Math.PI * 45.0 / 180.0;
+    this._fogColor = vec3.fromValues(1, 1, 1);
+    this._outlineColor = vec3.fromValues(0.1, 0.1, 0.1);
+    this._outlineWidth = 1.0;
+    this._outlineEnabled = true;
+    this._selectionColor = vec4.fromValues(0.1, 1.0, 0.1, 0.7);
+    this._center = vec3.create();
+    this._zoom = 50;
+    this._screenDoorTransparency = false;
+    this._updateProjectionMat = true;
+    this._updateModelViewMat = true;
+    this._upsamplingFactor = 1;
+    this._gl = gl;
+    this._currentShader = null;
+    this._stateId = 0;
+    this.setViewportSize(gl.viewportWidth, gl.viewportHeight);
+  }
 
-  _incrementStateId : function() {
-      this._stateId += 1;
-      if (this._stateId > 0xfffffffff) {
-        this._stateId = 0;
-      }
-  },
-  setOutlineEnabled : function(value) {
+  private _incrementStateId(): void {
+    this._stateId += 1;
+    if (this._stateId > 0xfffffffff) {
+      this._stateId = 0;
+    }
+  }
+
+  setOutlineEnabled(value: boolean): void {
     this._outlineEnabled = value;
     this._incrementStateId();
-  },
-  setScreenDoorTransparency : function(value) {
+  }
+
+  setScreenDoorTransparency(value: boolean): void {
     this._screenDoorTransparency = value;
     this._incrementStateId();
-  },
-  setOutlineWidth : function(value) {
+  }
+
+  setOutlineWidth(value: number): void {
     if (this._outlineWidth !== value) {
       this._outlineWidth = value;
       this._incrementStateId();
     }
-  },
-  addOnCameraChanged : function(fn) {
+  }
+
+  addOnCameraChanged(fn: (cam: Cam) => void): void {
     this._onCameraChangedListeners.push(fn);
-  },
-  _informOnCameraChangedListeners : function() {
-    var cam = this;
+  }
+
+  private _informOnCameraChangedListeners(): void {
+    const cam = this;
     this._onCameraChangedListeners.forEach(function(fn) {
       fn(cam);
     });
-  },
-  setRotation : function(rot) {
-    var update = false;
+  }
+
+  setRotation(rot: mat4 | mat3): void {
+    let update = false;
     if (rot.length === 16) {
       if (!floatArraysAreEqual(this._rotation, rot)) {
-        mat4.copy(this._rotation, rot);
+        mat4.copy(this._rotation, rot as mat4);
         update = true;
       }
     } else {
-      mat4FromMat3(this._rotation, rot);
+      mat4FromMat3(this._rotation, rot as mat3);
       update = true;
     }
     if (update) {
       this._informOnCameraChangedListeners();
       this._updateModelViewMat = true;
     }
-  },
-  upsamplingFactor : function() {
+  }
+
+  upsamplingFactor(): number {
     return this._upsamplingFactor;
-  },
-  setUpsamplingFactor : function(val) {
+  }
+
+  setUpsamplingFactor(val: number): void {
     if (this._upsamplingFactor !== val) {
       this._incrementStateId();
       this._upsamplingFactor = val;
-      var x = this._upsamplingFactor/this._width;
-      var y = this._upsamplingFactor/this._height;
+      const x = this._upsamplingFactor/this._width;
+      const y = this._upsamplingFactor/this._height;
       this._relativePixelSize = new Float32Array([x, y]);
     }
-  },
+  }
 
   // returns the 3 main axes of the current camera rotation
-  mainAxes : function() {
-    return[
-      vec3.fromValues(this._rotation[0], this._rotation[4], this._rotation[8]),
-      vec3.fromValues(this._rotation[1], this._rotation[5], this._rotation[9]),
-      vec3.fromValues(this._rotation[2], this._rotation[6], this._rotation[10])
+  mainAxes(): [vec3, vec3, vec3] {
+    return [
+      vec3.fromValues(this._rotation[0]!, this._rotation[4]!, this._rotation[8]!),
+      vec3.fromValues(this._rotation[1]!, this._rotation[5]!, this._rotation[9]!),
+      vec3.fromValues(this._rotation[2]!, this._rotation[6]!, this._rotation[10]!)
     ];
-  },
+  }
 
-  fieldOfViewY : function() {
+  fieldOfViewY(): number {
     return this._fovY;
-  },
+  }
 
-  setFieldOfViewY : function(value) {
+  setFieldOfViewY(value: number): void {
     this._fovY = value;
     this._updateProjectionMat = true;
-  },
+  }
 
-  aspectRatio : function() {
+  aspectRatio(): number {
     return this._width / this._height;
-  },
+  }
 
-  rotation : function() {
+  rotation(): mat4 {
     return this._rotation;
-  },
+  }
 
-  _updateIfRequired : function() {
-    var updated = false;
+  private _updateIfRequired(): boolean {
+    let updated = false;
     if (this._updateModelViewMat) {
-       mat4.identity(this._camModelView);
-       mat4.translate(this._camModelView, this._camModelView,
-                      [-this._center[0], -this._center[1], -this._center[2]]);
-       mat4.mul(this._camModelView, this._rotation, this._camModelView);
-       mat4.identity(this._translation);
-       mat4.translate(this._translation, this._translation, 
-                      [0, 0, -this._zoom]);
-       mat4.mul(this._camModelView, this._translation, 
-                this._camModelView);
-       updated = true;
+      mat4.identity(this._camModelView);
+      mat4.translate(this._camModelView, this._camModelView,
+                     [-this._center[0], -this._center[1], -this._center[2]]);
+      mat4.mul(this._camModelView, this._rotation, this._camModelView);
+      mat4.identity(this._translation);
+      mat4.translate(this._translation, this._translation,
+                     [0, 0, -this._zoom]);
+      mat4.mul(this._camModelView, this._translation,
+               this._camModelView);
+      updated = true;
     }
     if (this._updateProjectionMat) {
       mat4.identity(this._projection);
@@ -204,159 +264,160 @@ Cam.prototype = {
       this._incrementStateId();
     }
     return updated;
-  },
+  }
 
-  setViewportSize : function(width, height) {
+  setViewportSize(width: number, height: number): void {
     this._updateProjectionMat = true;
     this._width = width;
     this._height = height;
-    this._relativePixelSize = new Float32Array([this._upsamplingFactor/width, 
+    this._relativePixelSize = new Float32Array([this._upsamplingFactor/width,
                                                 this._upsamplingFactor/height]);
-  },
+  }
 
-  viewportWidth : function() {
+  viewportWidth(): number {
     return this._width;
-  },
-  viewportHeight : function() {
+  }
+  viewportHeight(): number {
     return this._height;
-  },
+  }
 
 
-  setCenter : function(point) {
+  setCenter(point: vec3): void {
     if (!floatArraysAreEqual(this._center, point)) {
       this._updateModelViewMat = true;
       vec3.copy(this._center, point);
       this._informOnCameraChangedListeners();
     }
-  },
+  }
 
-  fog : function(value) {
+  fog(value?: boolean): boolean {
     if (value !== undefined && value !== this._fog) {
       this._fog = value;
       this._incrementStateId();
     }
     return this._fog;
-  },
+  }
 
-  rotateZ : (function() {
-    var tm = mat4.create();
-    return function(delta) {
+  rotateZ = (function() {
+    const tm = mat4.create();
+    return function(this: Cam, delta: number): void {
       mat4.identity(tm);
       this._updateModelViewMat = true;
       mat4.rotate(tm, tm, delta, [ 0, 0, 1 ]);
       mat4.mul(this._rotation, tm, this._rotation);
       this._informOnCameraChangedListeners();
     };
-  })(),
+  })();
 
-  rotateX : (function() {
-    var tm = mat4.create();
-    return function(delta) {
+  rotateX = (function() {
+    const tm = mat4.create();
+    return function(this: Cam, delta: number): void {
       mat4.identity(tm);
       this._updateModelViewMat = true;
       mat4.rotate(tm, tm, delta, [ 1, 0, 0 ]);
       mat4.mul(this._rotation, tm, this._rotation);
       this._informOnCameraChangedListeners();
     };
-  })(),
+  })();
 
-  rotateY : (function() {
-    var tm = mat4.create();
-    return function(delta) {
+  rotateY = (function() {
+    const tm = mat4.create();
+    return function(this: Cam, delta: number): void {
       mat4.identity(tm);
       this._updateModelViewMat = true;
       mat4.rotate(tm, tm, delta, [ 0, 1, 0 ]);
       mat4.mul(this._rotation, tm, this._rotation);
       this._informOnCameraChangedListeners();
     };
-  })(),
+  })();
 
-  panX : function(delta) {
+  panX(delta: number): void {
     return this.panXY(delta, 0);
-  },
+  }
 
-  panY : function(delta) {
+  panY(delta: number): void {
     return this.panXY(0, delta);
-  },
+  }
 
-  panXY : (function () {
-    var invertRotation = mat4.create();
-    var newCenter = vec3.create();
-    return function(deltaX, deltaY) {
+  panXY = (function () {
+    const invertRotation = mat4.create();
+    const newCenter = vec3.create();
+    return function(this: Cam, deltaX: number, deltaY: number): void {
       mat4.transpose(invertRotation, this._rotation);
       this._updateModelViewMat = true;
       vec3.set(newCenter, -deltaX, deltaY, 0);
       vec3.transformMat4(newCenter, newCenter, invertRotation);
       vec3.add(newCenter, newCenter, this._center);
-      this.setCenter(newCenter); 
+      this.setCenter(newCenter);
     };
-  })(),
+  })();
 
-  nearOffset : function() { return this._near; },
-  farOffset : function() { return this._far; },
+  nearOffset(): number { return this._near; }
+  farOffset(): number { return this._far; }
 
 
-  setNearFar : function(near, far) {
+  setNearFar(near: number, far: number): void {
     if (near === this._near && far === this._far) {
       return;
     }
     this._near = near;
     this._far = far;
     this._updateProjectionMat = true;
-  },
+  }
 
-  setFogNearFar : function(near, far) {
+  setFogNearFar(near: number, far: number): void {
     this._fogNear = near;
     this._fogFar = far;
     this._updateProjectionMat = true;
-  },
+  }
 
-  setZoom : function(zoom) {
+  setZoom(zoom: number): number {
     if (Math.abs(this._zoom - zoom) > 0.00000001) {
       this._updateModelViewMat = true;
       this._zoom = zoom;
     }
     return this._zoom;
-  },
+  }
 
-  zoom : function(delta) {
+  zoom(delta?: number): number {
     if (delta === undefined) {
       return this._zoom;
     }
     this._updateModelViewMat = true;
-    var factor = 1.0 + delta * 0.1;
+    const factor = 1.0 + delta * 0.1;
     this._zoom = Math.min(1000.0, Math.max(2.0, factor * this._zoom));
     this._informOnCameraChangedListeners();
     return this._zoom;
-  },
+  }
 
-  center : function() {
+  center(): vec3 {
     return this._center;
-  },
+  }
 
-  setFogColor : function(color) {
+  setFogColor(color: vec3): void {
     this._fogColor = vec3.clone(color);
-  },
+  }
 
-  currentShader : function() {
+  currentShader(): ShaderProgram | null {
     return this._currentShader;
-  },
+  }
 
-  invalidateCurrentShader : function() {
+  invalidateCurrentShader(): void {
     this._currentShader = null;
-  },
-  setOutlineColor : function(color) {
+  }
+
+  setOutlineColor(color: vec3): void {
     this._outlineColor = vec3.clone(color);
-  },
-  setSelectionColor : function(color) {
-    this._selectionColor = vec3.clone(color);
+  }
+
+  setSelectionColor(color: vec3 | vec4): void {
     if (color.length === 3) {
       this._selectionColor = vec4.fromValues(color[0], color[1], color[2], 0.7);
     } else {
-      this._selectionColor = vec4.clone(color);
+      this._selectionColor = vec4.clone(color as vec4);
     }
     this._incrementStateId();
-  },
+  }
 
   // sets all OpenGL parameters to make this camera active.
   //
@@ -369,9 +430,9 @@ Cam.prototype = {
   // - fogNear,fogFar  - near and far offset of fog
   // - fogColor        - the color of fog
   // - outlineColor    - color to be used for the outline shader
-  bind : function(shader, additionalTransform) {
-    var shaderChanged = false;
-    var gl = this._gl;
+  bind(shader: ShaderProgram, additionalTransform?: mat4): void {
+    let shaderChanged = false;
+    const gl = this._gl;
     if (this._currentShader !== shader) {
       this._currentShader = shader;
       gl.useProgram(shader);
@@ -380,7 +441,7 @@ Cam.prototype = {
     shaderChanged = this._updateIfRequired() || shaderChanged;
 
     // in case additionalTransform is given, multiply camera model view
-    // with the matrix and use the product as the model view matrix. 
+    // with the matrix and use the product as the model view matrix.
     if (additionalTransform) {
       mat4.mul(this._modelView, this._camModelView, additionalTransform);
       gl.uniformMatrix4fv(shader.modelview, false, this._modelView);
@@ -398,8 +459,8 @@ Cam.prototype = {
     if (shader.rotation) {
       gl.uniformMatrix4fv(shader.rotation, false, this._rotation);
     }
-    gl.uniform1i(shader.fog, this._fog);
-    var nearOffset =   this._zoom ;
+    gl.uniform1i(shader.fog, this._fog ? 1 : 0);
+    const nearOffset = this._zoom;
     gl.uniform1f(shader.fogFar, this._fogFar + nearOffset);
     gl.uniform1f(shader.zoom, this._zoom);
     gl.uniform1f(shader.fogNear, this._fogNear + nearOffset);
@@ -408,10 +469,9 @@ Cam.prototype = {
     gl.uniform4fv(shader.selectionColor, this._selectionColor);
     gl.uniform2fv(shader.relativePixelSize, this._relativePixelSize);
     gl.uniform1f(shader.outlineWidth, this._outlineWidth);
-    gl.uniform1i(shader.screenDoorTransparency, this._screenDoorTransparency);
-    gl.uniform1i(shader.outlineEnabled, this._outlineEnabled);
+    gl.uniform1i(shader.screenDoorTransparency, this._screenDoorTransparency ? 1 : 0);
+    gl.uniform1i(shader.outlineEnabled, this._outlineEnabled ? 1 : 0);
   }
-};
+}
 
 export default Cam;
-
