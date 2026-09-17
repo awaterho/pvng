@@ -18,13 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  [
-    './gl-matrix', 
-  ], 
-  function(glMatrix) {
-
-"use strict";
+import glMatrix from './gl-matrix.js';
 
 var vec3 = glMatrix.vec3;
 
@@ -116,11 +110,9 @@ function fetchDcd(url, structure, callback) {
   });
 }
 
-return {
+export default {
   CoordGroup : CoordGroup,
   fetchDcd : fetchDcd,
 
 };
-
-});
 

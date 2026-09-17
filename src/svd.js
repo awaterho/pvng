@@ -5,8 +5,6 @@ It is apparently translated from http://stitchpanorama.sourceforge.net/Python/sv
 */
 
 
-define(function() {
-
 function svd(A) {
     var temp;
 //Compute the thin SVD from G. H. Golub and C. Reinsch, Numer. Math. 14, 403-420 (1970)
@@ -307,6 +305,4 @@ function svd(A) {
 	return {U:u,S:q,V:v}
 };
 
-return svd;
-
-});
+export default svd;

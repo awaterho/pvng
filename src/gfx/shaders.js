@@ -18,8 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define({
-// NOTE: The shader code below use the placeholder ${PRECISION} variable 
+export default {
+// NOTE: The shader code below use the placeholder ${PRECISION} variable
 // for the shader precision. This values is replaced before compiling 
 // the shader program with highp on iOS and mediump on all other devices. 
 // This is required, because the outline shaders do not work well on iOS 
@@ -448,5 +448,5 @@ void main() {\n\
   objId = attrObjId;\n\
 }'
 
-});
+};
 

@@ -18,17 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../utils', 
-    './mesh-geom', 
-  ], 
-  function(
-    utils, 
-    MeshGeom
-  ) {
-
-"use strict";
+import utils from '../utils.js';
+import MeshGeom from './mesh-geom.js';
 
 function BillboardGeom(gl, float32Allocator, uint16Allocator) {
   MeshGeom.call(this, gl, float32Allocator, uint16Allocator);
@@ -56,7 +47,5 @@ utils.derive(BillboardGeom, MeshGeom, {
   },
 });
 
-return BillboardGeom;
-
-});
+export default BillboardGeom;
 

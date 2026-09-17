@@ -18,8 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(['gl-matrix'], function(glMatrix) {
-"use strict";
+import glMatrix from './gl-matrix.js';
 
 var vec3 = glMatrix.vec3;
 var vec4 = glMatrix.vec4;
@@ -299,7 +298,7 @@ function interpolateScalars(values, num) {
   return out;
 }
 
-return {
+export default {
   signedAngle : signedAngle,
   axisRotation : axisRotation,
   ortho : ortho,
@@ -311,6 +310,4 @@ return {
   Sphere : Sphere,
   buildRotation : buildRotation
 };
-
-});
 

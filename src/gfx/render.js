@@ -18,27 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../geom', 
-    './billboard-geom', 
-    './line-geom', 
-    './mesh-geom', 
-    './geom-builders', 
-    './vert-assoc', 
-    '../color',
-    '../gl-matrix'
-  ], 
-  function(
-    geom, 
-    BillboardGeom,
-    LineGeom, 
-    MeshGeom, 
-    gfxGeomBuilders, 
-    gfxVertAssoc, 
-    color, 
-    glMatrix) {
-"use strict";
+import geom from '../geom.js';
+import BillboardGeom from './billboard-geom.js';
+import LineGeom from './line-geom.js';
+import MeshGeom from './mesh-geom.js';
+import gfxGeomBuilders from './geom-builders.js';
+import gfxVertAssoc from './vert-assoc.js';
+import color from '../color.js';
+import glMatrix from '../gl-matrix.js';
 
 var vec3 = glMatrix.vec3;
 var vec4 = glMatrix.vec4;
@@ -1225,5 +1212,4 @@ var _renderSingleTrace = (function() {
 })();
 
 
-return exports;
-});
+export default exports;

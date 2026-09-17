@@ -18,18 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../utils', 
-    './vertex-array', 
-    './indexed-vertex-array'
-  ], 
-  function(
-    utils, 
-    VertexArray, 
-    IndexedVertexArray) {
-
-"use strict";
+import utils from '../utils.js';
+import VertexArray from './vertex-array.js';
+import IndexedVertexArray from './indexed-vertex-array.js';
 
 // LineChainData and MeshChainData are two internal classes that add molecule-
 // specific attributes and functionality to the IndexedVertexArray and 
@@ -68,10 +59,8 @@ MeshChainData.prototype.drawSymmetryRelated =
   LineChainData.prototype.drawSymmetryRelated;
 
 
-return {
+export default {
   LineChainData : LineChainData,
   MeshChainData : MeshChainData
 };
-
-});
 

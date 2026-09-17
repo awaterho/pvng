@@ -18,17 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  [
-    '../gl-matrix', 
-    '../utils', 
-    '../geom'
-  ], 
-  function(
-    glMatrix, 
-    utils, 
-    geom) {
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import utils from '../utils.js';
+import geom from '../geom.js';
 
 var vec3 = glMatrix.vec3;
 var quat = glMatrix.quat;
@@ -222,7 +214,7 @@ function rockAndRoll() {
   return new RockAndRoll([0, 1, 0], 2000);
 }
 
-return {
+export default {
   AnimationControl : AnimationControl,
   move : move,
   rotate : rotate,
@@ -230,5 +222,3 @@ return {
   rockAndRoll : rockAndRoll,
   spin : spin
 };
-
-});

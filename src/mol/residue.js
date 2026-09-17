@@ -18,10 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(['gl-matrix', 'utils', './atom'], 
-       function(glMatrix, utils, atom) {
-
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import utils from '../utils.js';
+import atom from './atom.js';
 
 var vec3 = glMatrix.vec3;
 var Atom = atom.Atom;
@@ -235,10 +234,8 @@ utils.derive(ResidueView, ResidueBase, {
   }
 });
 
-return {
+export default {
   ResidueView : ResidueView,
   Residue : Residue
 };
-
-});
 

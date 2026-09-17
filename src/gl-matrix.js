@@ -28,7 +28,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 
-define(function() {
 var exports = {};
 /* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
 
@@ -3035,6 +3034,4 @@ quat.str = function (a) {
 };
 
 exports.quat = quat;
-return exports;
-
-});
+export default exports;

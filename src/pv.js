@@ -18,13 +18,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  ['./gl-matrix', './viewer', './io', './mol/all', './color', 
-    './viewpoint', './traj'], 
-  function(glMatrix, viewer, io, mol, color, viewpoint, traj) {
-  'use strict';
-  // export 
-  return {
+import glMatrix from './gl-matrix.js';
+import viewer from './viewer.js';
+import io from './io.js';
+import mol from './mol/all.js';
+import color from './color.js';
+import viewpoint from './viewpoint.js';
+import traj from './traj.js';
+
+// export
+export default {
     Viewer : viewer.Viewer,
     isWebGLSupported : viewer.isWebGLSupported,
     io : io,
@@ -43,4 +46,3 @@ define(
     quat : glMatrix.quat,
     viewpoint : viewpoint
   };
-});

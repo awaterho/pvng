@@ -18,20 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../utils', 
-    './base-geom', 
-    './chain-data', 
-    './indexed-vertex-array'
-  ], 
-  function(
-    utils, 
-    BaseGeom, 
-    cd, 
-    IndexedVertexArray) {
-
-"use strict";
+import utils from '../utils.js';
+import BaseGeom from './base-geom.js';
+import cd from './chain-data.js';
+import IndexedVertexArray from './indexed-vertex-array.js';
 
 var MeshChainData = cd.MeshChainData;
 
@@ -198,6 +188,5 @@ utils.derive(MeshGeom, BaseGeom, {
 
 });
 
-return MeshGeom;
-});
+export default MeshGeom;
 

@@ -18,10 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(function() {
-
-"use strict";
-
 // A continous range of object identifiers.
 function ContinuousIdRange(pool, start, end) {
   this._pool = pool;
@@ -111,6 +107,4 @@ UniqueObjectIdPool.prototype = {
   }
 };
 
-return UniqueObjectIdPool;
-
-});
+export default UniqueObjectIdPool;

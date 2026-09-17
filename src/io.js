@@ -18,18 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  [
-    './gl-matrix', 
-    './mol/symmetry',
-    './mol/all',
-  ], 
-  function(
-    glMatrix, 
-    symmetry,
-    mol) {
-
-"use strict";
+import glMatrix from './gl-matrix.js';
+import symmetry from './mol/symmetry.js';
+import mol from './mol/all.js';
 
 var vec3 = glMatrix.vec3;
 var mat4 = glMatrix.mat4;
@@ -651,7 +642,7 @@ function fetchCrd(url, callback) {
   });
 }
 
-return {
+export default {
   pdb : pdb,
   sdf : sdf,
   crd : crd,
@@ -661,6 +652,4 @@ return {
   fetchCrd : fetchCrd,
   guessAtomElementFromName : guessAtomElementFromName
 };
-
-});
 

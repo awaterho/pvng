@@ -19,49 +19,24 @@
 // DEALINGS IN THE SOFTWARE.
 
 
-define([
-  './gl-matrix', 
-  './color', 
-  './unique-object-id-pool', 
-  './gfx/canvas', 
-  './utils', 
-  './gfx/framebuffer', 
-  './buffer-allocators', 
-  './gfx/cam', 
-  './gfx/shaders', 
-  './touch', 
-  './mouse', 
-  './gfx/render', 
-  './gfx/label', 
-  './gfx/custom-mesh', 
-  './gfx/animation', 
-  './gfx/scene-node',
-  './geom',
-  './slab'], 
-  function(
-    glMatrix, 
-    color, 
-    UniqueObjectIdPool, 
-    canvas, 
-    utils, 
-    FrameBuffer, 
-    PoolAllocator, 
-    Cam, 
-    shaders, 
-    TouchHandler, 
-    MouseHandler,
-    render, 
-    TextLabel, 
-    CustomMesh, 
-    anim, 
-    SceneNode,
-    geom,
-    // slab must be last due to a problem in AMDClean that occurs
-    // when the last parameter name does not match the module file 
-    // name
-    slab) {
-
-"use strict";
+import glMatrix from './gl-matrix.js';
+import color from './color.js';
+import UniqueObjectIdPool from './unique-object-id-pool.js';
+import canvas from './gfx/canvas.js';
+import utils from './utils.js';
+import FrameBuffer from './gfx/framebuffer.js';
+import PoolAllocator from './buffer-allocators.js';
+import Cam from './gfx/cam.js';
+import shaders from './gfx/shaders.js';
+import TouchHandler from './touch.js';
+import MouseHandler from './mouse.js';
+import render from './gfx/render.js';
+import TextLabel from './gfx/label.js';
+import CustomMesh from './gfx/custom-mesh.js';
+import anim from './gfx/animation.js';
+import SceneNode from './gfx/scene-node.js';
+import geom from './geom.js';
+import slab from './slab.js';
 
 // FIXME: Browser vendors tend to block quite a few graphic cards. Instead
 //   of showing this very generic message, implement a per-browser
@@ -1179,11 +1154,9 @@ Viewer.prototype = {
 
 Viewer.prototype.addListener = Viewer.prototype.on;
 
-return { 
-  Viewer : function(elem, options) { 
-    return new Viewer(elem, options); 
+export default {
+  Viewer : function(elem, options) {
+    return new Viewer(elem, options);
   },
   isWebGLSupported : canvas.isWebGLSupported
 };
-
-});

@@ -18,10 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  ['../color', '../geom'], function(color, geom) {
-
-"use strict";
+import color from '../color.js';
+import geom from '../geom.js';
 
 // During recoloring of a render style, most of the vertex attributes, e.g.
 // normals and positions do not change. Only the color information for each
@@ -296,9 +294,7 @@ TraceVertexAssoc.prototype = {
   }
 };
 
-return {
+export default {
   TraceVertexAssoc : TraceVertexAssoc,
   AtomVertexAssoc : AtomVertexAssoc
 };
-
-});

@@ -18,18 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../utils', 
-    './base-geom', 
-    './chain-data'
-  ], 
-  function(
-    utils, 
-    BaseGeom, 
-    chainData) {
-
-"use strict";
+import utils from '../utils.js';
+import BaseGeom from './base-geom.js';
+import chainData from './chain-data.js';
 
 var LineChainData = chainData.LineChainData;
 
@@ -118,7 +109,5 @@ utils.derive(LineGeom, BaseGeom, {
   vertArray : function() { return this._va; }
 });
 
-return LineGeom;
-
-});
+export default LineGeom;
 

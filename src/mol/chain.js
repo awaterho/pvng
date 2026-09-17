@@ -18,20 +18,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  [
-    '../gl-matrix', 
-    '../utils', 
-    './residue', 
-    './trace'
-  ], 
-  function(
-    glMatrix, 
-    utils, 
-    residue, 
-    trace) {
-
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import utils from '../utils.js';
+import residue from './residue.js';
+import trace from './trace.js';
 
 var vec3 = glMatrix.vec3;
 var Residue = residue.Residue;
@@ -402,10 +392,8 @@ utils.derive(ChainView, ChainBase, {
   structure : function() { return this._molView; }
 });
 
-return {
+export default {
   Chain : Chain,
   ChainView : ChainView
 };
-
-});
 

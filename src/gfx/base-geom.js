@@ -18,18 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../utils', 
-    '../gl-matrix', 
-    './scene-node'
-  ], 
-  function(
-    utils, 
-    glMatrix, 
-    SceneNode) {
-
-"use strict";
+import utils from '../utils.js';
+import glMatrix from '../gl-matrix.js';
+import SceneNode from './scene-node.js';
 
 var vec3 = glMatrix.vec3;
 
@@ -309,8 +300,5 @@ utils.derive(BaseGeom, SceneNode, {
 });
 
 
-return BaseGeom;
-
-});
-
+export default BaseGeom;
 

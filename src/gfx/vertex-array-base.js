@@ -18,15 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../gl-matrix', 
-    '../geom'
-  ], 
-  function(
-    glMatrix, 
-    geom) {
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import geom from '../geom.js';
 
 var vec3 = glMatrix.vec3;
 
@@ -171,6 +164,4 @@ VertexArrayBase.prototype = {
   })()
 };
 
-return VertexArrayBase;
-
-});
+export default VertexArrayBase;

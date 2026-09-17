@@ -18,16 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../utils', 
-    './vertex-array-base'
-  ], 
-  function(
-    utils, 
-    VertexArrayBase) {
-
-"use strict";
+import utils from '../utils.js';
+import VertexArrayBase from './vertex-array-base.js';
 
 function IndexedVertexArray(gl, numVerts, numIndices, 
                             float32Allocator, uint16Allocator) {
@@ -189,6 +181,4 @@ utils.derive(IndexedVertexArray, VertexArrayBase, {
   }
 });
 
-return IndexedVertexArray;
-
-});
+export default IndexedVertexArray;

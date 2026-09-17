@@ -18,15 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define([
-  './gl-matrix', 
-  './utils', 
-  ], 
-  function(
-    glMatrix, 
-    utils) {
-
-"use strict";
+import glMatrix from './gl-matrix.js';
+import utils from './utils.js';
 
 function MouseHandler(canvas, viewer, cam, animationTime) {
   this._viewer = viewer;
@@ -159,6 +152,4 @@ MouseHandler.prototype = {
 
 };
 
-return MouseHandler;
-
-});
+export default MouseHandler;

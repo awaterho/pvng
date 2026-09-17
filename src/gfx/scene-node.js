@@ -18,10 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(function() {
-
-"use strict";
-
 // A scene node holds a set of child nodes to be rendered on screen. Later on,
 // the SceneNode might grow additional functionality commonly found in a scene
 // graph, e.g. coordinate transformations.
@@ -79,8 +75,5 @@ SceneNode.prototype = {
   }
 };
 
-return SceneNode;
-
-});
-
+export default SceneNode;
 

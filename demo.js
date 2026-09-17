@@ -1,24 +1,9 @@
+import PV from './src/pv.js';
 
-requirejs.config({
-  'baseUrl' : 'src' ,
-  // uncomment the following commented-out block to test the contatenated, 
-  // minified PV version. Grunt needs to be run before for this to work.
-  /*
-  paths : {
-    pv : '/js/bio-pv.min'
-  }
-  */
-});
-
-
-// on purpose outside of the require block, so we can inspect the viewer object 
-// from the JavaScript console.
 var viewer;
 
-var pv;
-require(['pv'], function(PV) {
-
-pv = PV;
+var pv = PV;
+window.pv = pv;
 var io = pv.io;
 var viewpoint = pv.viewpoint;
 var color = pv.color;
@@ -284,12 +269,13 @@ $('#load-from-pdb').change(function() {
   });
 });
 
-viewer = pv.Viewer(document.getElementById('viewer'), { 
+viewer = pv.Viewer(document.getElementById('viewer'), {
     width : 'auto', height: 'auto', antialias : true, fog : true,
     outline : true, quality : 'high', style : 'phong',
-    selectionColor : 'white', transparency : 'screendoor', 
+    selectionColor : 'white', transparency : 'screendoor',
     background : '#ccc', animateTime: 500, doubleClick : null
 });
+window.viewer = viewer;
 
 viewer.addListener('viewerReady', trajectory);
 
@@ -304,6 +290,4 @@ viewer.on('doubleClick', function(picked) {
 
 window.addEventListener('resize', function() {
       viewer.fitParent();
-});
-
 });

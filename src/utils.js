@@ -18,10 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(function() {
-
-"use strict";
-
 var exports = {};
 exports.derive = function(subclass, baseclass, extensions) {
   // jshint forin:false
@@ -217,7 +213,5 @@ Range.prototype = {
 
 exports.Range = Range;
 
-return exports;
-
-});
+export default exports;
 

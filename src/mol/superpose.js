@@ -18,10 +18,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(['gl-matrix', '../svd', 'utils', '../geom', './mol'], 
-       function(glMatrix, svd, utils, geom, mol) {
-
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import svd from '../svd.js';
+import utils from '../utils.js';
+import geom from '../geom.js';
+import mol from './mol.js';
 
 var vec3 = glMatrix.vec3;
 var mat3 = glMatrix.mat3;
@@ -264,13 +265,11 @@ function matchResiduesByNum(inA, inB, atoms) {
   });
 }
 
-return {
+export default {
   superpose : superpose,
   matchResiduesByNum : matchResiduesByNum,
   matchResiduesByIndex : matchResiduesByIndex,
   parseAtomNames : parseAtomNames,
   addAtomsPresentInBoth : addAtomsPresentInBoth
 };
-
-});
 

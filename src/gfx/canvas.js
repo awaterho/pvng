@@ -19,14 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 
-define([
-  '../utils', 
-  ],
-  function(
-    utils
-  ) {
-
-"use strict";
+import utils from '../utils.js';
 
 function isWebGLSupported(gl) {
   if (document.readyState !== "complete" &&
@@ -310,9 +303,7 @@ Canvas.prototype = {
   },
 };
 
-return { 
+export default {
   Canvas : Canvas,
   isWebGLSupported : isWebGLSupported
 };
-
-});

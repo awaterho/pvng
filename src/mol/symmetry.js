@@ -18,10 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(function() {
-
-"use strict";
-
 // a list of rotation/translation operators to be applied to certain chains,
 // typically of the asymmetric unit.
 function SymGenerator(chains, matrices) {
@@ -64,11 +60,9 @@ Assembly.prototype = {
   }
 };
 
-return {
+export default {
   SymGenerator : SymGenerator,
   Assembly : Assembly
 };
-
-});
 
 

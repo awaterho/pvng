@@ -1,5 +1,3 @@
-define(function() {
-
 function fulfillsPredicates(obj, predicates) {
   for (var i = 0; i < predicates.length; ++i) {
     if (!predicates[i](obj)) {
@@ -185,9 +183,7 @@ function polymerSelect(structure, view) {
   return view;
 }
 
-return {
+export default {
   dict : dictSelect,
   polymer : polymerSelect
 };
-
-});

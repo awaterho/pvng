@@ -18,10 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(['gl-matrix', 'utils', '../geom', './chain', './bond', './select'], 
-       function(glMatrix, utils, geom, chain, bond, select) {
-
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import utils from '../utils.js';
+import geom from '../geom.js';
+import chain from './chain.js';
+import bond from './bond.js';
+import select from './select.js';
 
 var vec3 = glMatrix.vec3;
 
@@ -530,10 +532,8 @@ utils.derive(MolView, MolBase, {
   }
 });
 
-return {
+export default {
   MolView : MolView,
   Mol : Mol
 };
-
-});
 

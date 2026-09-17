@@ -18,15 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(
-  [
-    '../gl-matrix', 
-    './mol',
-    './superpose'
-  ], 
-  function(glMatrix, mol, sp) {
-
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import mol from './mol.js';
+import sp from './superpose.js';
 
 var vec3 = glMatrix.vec3;
 
@@ -93,7 +87,7 @@ function assignHelixSheet(structure) {
   console.timeEnd('mol.assignHelixSheet');
 }
 
-return {
+export default {
   Mol: mol.Mol,
   MolView: mol.MolView,
   assignHelixSheet : assignHelixSheet,
@@ -102,5 +96,3 @@ return {
   matchResiduesByNum: sp.matchResiduesByNum,
 
 };
-
-});

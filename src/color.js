@@ -18,14 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    './gl-matrix'
-  ], 
-  function(
-    glMatrix) {
-
-"use strict";
+import glMatrix from './gl-matrix.js';
 
 var vec4 = glMatrix.vec4;
 
@@ -550,5 +543,4 @@ exports.interpolateColor = function(colors, num) {
 // initialize gradients with default colors
 exports.initGradients();
 
-return exports;
-});
+export default exports;

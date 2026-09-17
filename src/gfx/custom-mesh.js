@@ -18,26 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-define(
-  [
-    '../gl-matrix', 
-    '../utils', 
-    '../color', 
-    '../geom', 
-    './geom-builders', 
-    './indexed-vertex-array', 
-    './scene-node'
-  ], 
-  function(
-    glMatrix, 
-    utils, 
-    color, 
-    geom, 
-    gb, 
-    IndexedVertexArray, 
-    SceneNode) {
-
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import utils from '../utils.js';
+import color from '../color.js';
+import geom from '../geom.js';
+import gb from './geom-builders.js';
+import IndexedVertexArray from './indexed-vertex-array.js';
+import SceneNode from './scene-node.js';
 
 var vec3 = glMatrix.vec3;
 var mat3 = glMatrix.mat3;
@@ -241,7 +228,5 @@ utils.derive(CustomMesh, SceneNode, {
   },
 });
 
-return CustomMesh;
-
-});
+export default CustomMesh;
 

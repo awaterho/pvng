@@ -18,10 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(function() {
-
-"use strict";
-
 function Slab(near, far) {
   this.near = near;
   this.far = far;
@@ -61,10 +57,8 @@ AutoSlab.prototype.update = function(objects, cam) {
   return new Slab(newNear, newFar);
 };
 
-return {
+export default {
   FixedSlab : FixedSlab,
   AutoSlab : AutoSlab,
   Slab : Slab
 };
-
-});

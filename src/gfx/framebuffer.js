@@ -18,10 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(function() {
-
-"use strict";
-
 function FrameBuffer(gl, options) {
   this._width = options.width;
   this._height = options.height;
@@ -107,7 +103,5 @@ FrameBuffer.prototype = {
   }
 };
 
-return FrameBuffer;
-
-});
+export default FrameBuffer;
 

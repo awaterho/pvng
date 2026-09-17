@@ -19,15 +19,8 @@
 // SOFTWARE.
 
 // contains classes for constructing geometry for spheres, cylinders and tubes.
-define(
-  [
-    '../gl-matrix', 
-    '../geom'
-  ], 
-  function(
-    glMatrix, 
-    geom) {
-"use strict";
+import glMatrix from '../gl-matrix.js';
+import geom from '../geom.js';
 
 var vec3 = glMatrix.vec3;
 
@@ -245,11 +238,9 @@ ProtoCylinder.prototype = {
   })()
 };
 
-return {
+export default {
   TubeProfile : TubeProfile,
   ProtoCylinder : ProtoCylinder,
   ProtoSphere : ProtoSphere
 };
-
-});
 

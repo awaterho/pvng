@@ -18,8 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-define(['utils'], function(utils) {
-"use strict";
+import utils from './utils.js';
 
 function TouchHandler(element, viewer, cam) {
   this._element = element;
@@ -182,9 +181,8 @@ TouchHandler.prototype = {
       var picked = this._viewer.pick(
           { x : pointer.x - rect.left, y : pointer.y - rect.top });
       this._viewer._dispatchEvent(event, 'click', picked);
-    } 
+    }
   },
 };
 
-return TouchHandler;
-});
+export default TouchHandler;

@@ -1,30 +1,14 @@
+import PV from './src/pv.js';
 
-requirejs.config({
-  'baseUrl' : 'src' ,
-  // uncomment the following commented-out block to test the contatenated, 
-  // minified PV version. Grunt needs to be run before for this to work.
-  /*
-  paths : {
-    pv : '/js/bio-pv.min'
-  }
-  */
-});
-
-
-// on purpose outside of the require block, so we can inspect the viewer object 
-// from the JavaScript console.
-var viewer;
-
-var pv;
-require(['pv'], function(PV) {
-
-pv = PV;
-viewer = pv.Viewer(document.getElementById('viewer'), { 
-    width : 'auto', height: 'auto', antialias : true, 
+var pv = PV;
+window.pv = pv;
+var viewer = pv.Viewer(document.getElementById('viewer'), {
+    width : 'auto', height: 'auto', antialias : true,
     outline : true, quality : 'medium', style : 'hemilight',
     selectionColor : 'red',
     background : '#333', animateTime: 500, doubleClick : null
 });
+window.viewer = viewer;
 
 viewer.options('selectionColor', '#f00');
 
@@ -69,7 +53,4 @@ viewer.on('click', function(picked, ev) {
   } 
   picked.node().setSelection(sel);
   viewer.requestRedraw();
-});
-
-
 });

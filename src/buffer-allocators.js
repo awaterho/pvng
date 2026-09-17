@@ -18,9 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-define(function() {
-"use strict";
-
 function PoolAllocator(bufferType) {
   this._freeArrays = [];
   this._bufferType = bufferType;
@@ -51,5 +48,4 @@ PoolAllocator.prototype.release = function(buffer) {
   this._freeArrays.push(buffer);
 };
 
-return PoolAllocator;
-});
+export default PoolAllocator;
