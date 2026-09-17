@@ -20,6 +20,7 @@
 import { vec3, mat4 } from 'gl-matrix';
 import symmetry, { type Assembly, type SymGenerator } from './mol/symmetry';
 import mol from './mol/all';
+import { parseCIF, type CIFRow } from './cif';
 
 const Mol = mol.Mol;
 type Mol = InstanceType<typeof Mol>;
@@ -664,6 +665,316 @@ function crd(text: string): Mol {
   return structure;
 }
 
+interface CifOptions {
+  loadAllModels?: boolean;
+}
+
+// builds a gl-matrix mat4 from one _pdbx_struct_oper_list row's matrix[i][j]/
+// vector[i] columns. Mirrors Remark350Reader's BIOMT layout above: column c
+// (0-indexed) of the resulting matrix holds CIF matrix column c+1, i.e.
+// m[c*4+r] = row's matrix[r+1][c+1] -- the standard column-major encoding of
+// `newPos = M*pos + t`.
+function operatorMatrixFromRow(row: CIFRow): mat4 {
+  const m = mat4.create();
+  m[0] = row.getNumber('matrix[1][1]') ?? 1;
+  m[1] = row.getNumber('matrix[2][1]') ?? 0;
+  m[2] = row.getNumber('matrix[3][1]') ?? 0;
+  m[4] = row.getNumber('matrix[1][2]') ?? 0;
+  m[5] = row.getNumber('matrix[2][2]') ?? 1;
+  m[6] = row.getNumber('matrix[3][2]') ?? 0;
+  m[8] = row.getNumber('matrix[1][3]') ?? 0;
+  m[9] = row.getNumber('matrix[2][3]') ?? 0;
+  m[10] = row.getNumber('matrix[3][3]') ?? 1;
+  m[12] = row.getNumber('vector[1]') ?? 0;
+  m[13] = row.getNumber('vector[2]') ?? 0;
+  m[14] = row.getNumber('vector[3]') ?? 0;
+  return m;
+}
+
+// expands one comma-separated, possibly range-containing operator id list
+// (e.g. "1,2,5-7") into individual id strings ["1","2","5","6","7"].
+function expandOperatorIds(list: string): string[] {
+  const ids: string[] = [];
+  const parts = list.split(',');
+  for (let i = 0; i < parts.length; ++i) {
+    const part = parts[i]!.trim();
+    if (part.length === 0) {
+      continue;
+    }
+    // operator ids are non-negative integers, so a '-' here is always a
+    // range separator, never a negative sign.
+    const dash = part.indexOf('-');
+    if (dash > 0) {
+      const from = parseInt(part.substring(0, dash), 10);
+      const to = parseInt(part.substring(dash + 1), 10);
+      if (!isNaN(from) && !isNaN(to)) {
+        for (let v = from; v <= to; ++v) {
+          ids.push(String(v));
+        }
+        continue;
+      }
+    }
+    ids.push(part);
+  }
+  return ids;
+}
+
+// splits a _pdbx_struct_assembly_gen.oper_expression like "(1-60)(61-88)"
+// into its parenthesized groups, each expanded to a list of operator ids. An
+// expression with no parentheses at all (e.g. "1,2") is treated as a single
+// group.
+function parseOperExpression(expression: string): string[][] {
+  const trimmed = expression.trim();
+  if (trimmed.indexOf('(') === -1) {
+    return [ expandOperatorIds(trimmed) ];
+  }
+  const groups: string[][] = [];
+  let i = 0;
+  const n = trimmed.length;
+  while (i < n) {
+    if (trimmed[i] === '(') {
+      let depth = 1;
+      let j = i + 1;
+      while (j < n && depth > 0) {
+        if (trimmed[j] === '(') {
+          depth++;
+        } else if (trimmed[j] === ')') {
+          depth--;
+        }
+        j++;
+      }
+      groups.push(expandOperatorIds(trimmed.substring(i + 1, j - 1)));
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return groups;
+}
+
+// expands an oper_expression into its final, literal list of transforms:
+// the Cartesian product of every parenthesized group, composed so that the
+// left-most group's operator is applied first (e.g. for "(A)(B)", each
+// resulting matrix is M(b) * M(a), i.e. "apply a, then b").
+function composeOperExpression(expression: string, operators: Map<string, mat4>): mat4[] {
+  const groups = parseOperExpression(expression);
+  let combos: mat4[] | null = null;
+  for (let g = 0; g < groups.length; ++g) {
+    const groupMatrices: mat4[] = [];
+    const ids = groups[g]!;
+    for (let i = 0; i < ids.length; ++i) {
+      const m = operators.get(ids[i]!);
+      if (m !== undefined) {
+        groupMatrices.push(m);
+      }
+    }
+    if (combos === null) {
+      combos = groupMatrices.map(function(m) { return mat4.clone(m); });
+      continue;
+    }
+    const next: mat4[] = [];
+    for (let a = 0; a < combos.length; ++a) {
+      for (let b = 0; b < groupMatrices.length; ++b) {
+        const result = mat4.create();
+        mat4.multiply(result, groupMatrices[b]!, combos[a]!);
+        next.push(result);
+      }
+    }
+    combos = next;
+  }
+  return combos ?? [];
+}
+
+class CIFReader {
+  private _doc: ReturnType<typeof parseCIF>;
+  private _loadAllModels: boolean;
+
+  constructor(doc: ReturnType<typeof parseCIF>, options: CifOptions) {
+    this._doc = doc;
+    this._loadAllModels = !!options.loadAllModels;
+  }
+
+  read(): Mol | (Mol | null)[] | undefined {
+    const atomRows = this._doc.loopRows('atom_site');
+    if (atomRows.length === 0) {
+      return undefined;
+    }
+    const modelNums = this._collectModelNumbers(atomRows);
+    if (!this._loadAllModels) {
+      return this._buildModel(atomRows, modelNums[0]!) ?? undefined;
+    }
+    return modelNums.map((modelNum) => this._buildModel(atomRows, modelNum));
+  }
+
+  private _collectModelNumbers(rows: CIFRow[]): (number | null)[] {
+    const order: (number | null)[] = [];
+    for (let i = 0; i < rows.length; ++i) {
+      const modelNum = rows[i]!.getNumber('pdbx_pdb_model_num') ?? null;
+      if (order.indexOf(modelNum) === -1) {
+        order.push(modelNum);
+      }
+    }
+    return order;
+  }
+
+  private _buildModel(rows: CIFRow[], modelNum: number | null): Mol | null {
+    const structure = new Mol();
+    let currChain: Chain | null = null;
+    let currChainName: string | null = null;
+    let currRes: Residue | null = null;
+    let currResKey: string | null = null;
+    let hetCounter = 0;
+    let sawAtom = false;
+
+    for (let i = 0; i < rows.length; ++i) {
+      const row = rows[i]!;
+      const rowModelNum = row.getNumber('pdbx_pdb_model_num') ?? null;
+      if (rowModelNum !== modelNum) {
+        continue;
+      }
+      const altId = row.get('label_alt_id');
+      if (altId !== undefined && altId !== '.' && altId !== 'A') {
+        continue;
+      }
+      const chainName = row.get('label_asym_id');
+      if (chainName === undefined) {
+        continue;
+      }
+      const compId = row.get('label_comp_id') || '';
+      const seqIdRaw = row.get('label_seq_id');
+      const isHetSeq = seqIdRaw === undefined || seqIdRaw === '.';
+
+      const updateChain = currChainName !== chainName;
+      if (updateChain) {
+        currChain = structure.chain(chainName) || structure.addChain(chainName);
+        currChainName = chainName;
+        currResKey = null;
+        hetCounter = 0;
+      }
+      const resKey = isHetSeq ? ('het:' + compId) : ('seq:' + seqIdRaw);
+      if (updateChain || currResKey !== resKey) {
+        let resNum: number;
+        if (isHetSeq) {
+          hetCounter += 1;
+          resNum = hetCounter;
+        } else {
+          resNum = parseInt(seqIdRaw!, 10);
+          if (isNaN(resNum)) {
+            resNum = 1;
+          }
+        }
+        currRes = currChain!.addResidue(compId, resNum);
+        currResKey = resKey;
+      }
+
+      const pos = vec3.create();
+      pos[0] = row.getNumber('cartn_x') ?? 0;
+      pos[1] = row.getNumber('cartn_y') ?? 0;
+      pos[2] = row.getNumber('cartn_z') ?? 0;
+      const element = row.get('type_symbol') || '';
+      const atomName = row.get('label_atom_id') || '';
+      const isHetatm = row.get('group_pdb') === 'HETATM';
+      const occupancy = row.getNumber('occupancy');
+      const tempFactor = row.getNumber('b_iso_or_equiv');
+      const serial = row.getNumber('id');
+      currRes!.addAtom(atomName, pos, element, isHetatm, occupancy, tempFactor, serial);
+      sawAtom = true;
+    }
+
+    if (!sawAtom) {
+      return null;
+    }
+    this._assignSecondaryStructure(structure);
+    this._assignAssemblies(structure);
+    structure.deriveConnectivity();
+    console.log('imported', structure.chains().length, 'chain(s),',
+                structure.residueCount(), 'residue(s)');
+    return structure;
+  }
+
+  private _assignSecondaryStructure(structure: Mol): void {
+    const helixRows = this._doc.loopRows('struct_conf');
+    for (let i = 0; i < helixRows.length; ++i) {
+      const row = helixRows[i]!;
+      const confType = row.get('conf_type_id');
+      if (confType === undefined || confType.toUpperCase().indexOf('HELX') !== 0) {
+        continue;
+      }
+      this._applySSRange(structure, row, 'H');
+    }
+    const sheetRows = this._doc.loopRows('struct_sheet_range');
+    for (let i = 0; i < sheetRows.length; ++i) {
+      this._applySSRange(structure, sheetRows[i]!, 'E');
+    }
+  }
+
+  private _applySSRange(structure: Mol, row: CIFRow, ss: string): void {
+    const chainName = row.get('beg_label_asym_id');
+    const begNum = row.getNumber('beg_label_seq_id');
+    const endNum = row.getNumber('end_label_seq_id');
+    if (chainName === undefined || begNum === undefined || endNum === undefined) {
+      return;
+    }
+    const chain = structure.chain(chainName);
+    if (chain === null) {
+      return;
+    }
+    chain.assignSS([begNum, '\0'], [endNum, '\0'], ss);
+  }
+
+  private _assignAssemblies(structure: Mol): void {
+    const operRows = this._doc.loopRows('pdbx_struct_oper_list');
+    if (operRows.length === 0) {
+      return;
+    }
+    const operators = new Map<string, mat4>();
+    for (let i = 0; i < operRows.length; ++i) {
+      const id = operRows[i]!.get('id');
+      if (id !== undefined) {
+        operators.set(id, operatorMatrixFromRow(operRows[i]!));
+      }
+    }
+    const genRows = this._doc.loopRows('pdbx_struct_assembly_gen');
+    const assemblies = new Map<string, Assembly>();
+    for (let i = 0; i < genRows.length; ++i) {
+      const row = genRows[i]!;
+      const assemblyId = row.get('assembly_id');
+      const asymIdList = row.get('asym_id_list');
+      const operExpression = row.get('oper_expression');
+      if (assemblyId === undefined || asymIdList === undefined || operExpression === undefined) {
+        continue;
+      }
+      const chainNames = asymIdList.split(',').map(function(s) { return s.trim(); })
+          .filter(function(s) { return s.length > 0; });
+      const matrices = composeOperExpression(operExpression, operators);
+      if (matrices.length === 0) {
+        continue;
+      }
+      let assembly = assemblies.get(assemblyId);
+      if (assembly === undefined) {
+        assembly = new symmetry.Assembly(assemblyId);
+        assemblies.set(assemblyId, assembly);
+      }
+      assembly.addGenerator(new symmetry.SymGenerator(chainNames, matrices));
+    }
+    if (assemblies.size > 0) {
+      structure.setAssemblies(Array.from(assemblies.values()));
+    }
+  }
+}
+
+// reads a structure from mmCIF text. Uses mmCIF's label_* identifiers
+// (label_asym_id/label_seq_id/label_atom_id/label_comp_id) to build chains/
+// residues/atoms, not auth_* -- see src/cif.ts for the underlying tokenizer.
+function cif(text: string, options?: CifOptions): Mol | (Mol | null)[] | undefined {
+  console.time('cif');
+  const doc = parseCIF(text);
+  const reader = new CIFReader(doc, options || {});
+  const result = reader.read();
+  console.timeEnd('cif');
+  return result;
+}
+
 
 function fetch(url: string, callback: (data: string) => void): void {
   const oReq = new XMLHttpRequest();
@@ -699,13 +1010,24 @@ function fetchCrd(url: string, callback: (structure: Mol) => void): void {
   });
 }
 
+function fetchCif(
+  url: string, callback: (structure: Mol | (Mol | null)[] | undefined) => void, options?: CifOptions
+): void {
+  fetch(url, function(data) {
+    const structure = cif(data, options);
+    callback(structure);
+  });
+}
+
 export default {
   pdb : pdb,
   sdf : sdf,
   crd : crd,
+  cif : cif,
   Remark350Reader : Remark350Reader,
   fetchPdb : fetchPdb,
   fetchSdf : fetchSdf,
   fetchCrd : fetchCrd,
+  fetchCif : fetchCif,
   guessAtomElementFromName : guessAtomElementFromName
 };
