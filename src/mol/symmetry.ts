@@ -21,7 +21,7 @@ import type { mat4 } from 'gl-matrix';
 
 // a list of rotation/translation operators to be applied to certain chains,
 // typically of the asymmetric unit.
-class SymGenerator {
+export class SymGenerator {
   private _chains: string[];
   private _matrices: mat4[];
 
@@ -47,7 +47,7 @@ class SymGenerator {
 // contains the definition for how to construct a biological assembly from
 // an asymmetric unit. Essentially a list of rotation/translation operators
 // to be applied to chains of the asymmetric unit.
-class Assembly {
+export class Assembly {
   private _name: string;
   private _generators: SymGenerator[];
 
