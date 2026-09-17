@@ -17,29 +17,97 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
+import type { vec3 } from 'gl-matrix';
 import utils from '../utils';
-import SceneNode from './scene-node';
+import SceneNode, { type SceneNode as ISceneNode } from './scene-node';
+import type Cam from './cam';
 
-function TextLabel(gl, canvas, context, pos, text, options) {
-  SceneNode.call(this, gl);
-  var opts = options || {};
-  this._options = {};
-  this._options.fillStyle = opts.fillStyle || '#000';
-  this._options.backgroundAlpha = opts.backgroundAlpha || 0.0;
-  this._options.fontSize = opts.fontSize || 24;
-  this._options.font = opts.font || 'Verdana';
-  this._options.fontStyle = opts.fontStyle || 'normal';
-  this._options.fontColor = opts.fontColor || '#000';
+interface TextLabelOptions {
+  fillStyle?: string;
+  backgroundAlpha?: number;
+  fontSize?: number;
+  font?: string;
+  fontStyle?: string;
+  fontColor?: string;
+}
+
+interface ResolvedTextLabelOptions {
+  fillStyle: string;
+  backgroundAlpha: number;
+  fontSize: number;
+  font: string;
+  fontStyle: string;
+  fontColor: string;
+}
+
+interface ShaderCatalog {
+  text: WebGLProgram;
+}
+
+function smallestPowerOfTwo(size: number): number {
+  let s = 1;
+  while (s < size) {
+    s *= 2;
+  }
+  return s;
+}
+
+// NOTE: kept as a prototype-based constructor function -- see
+// gfx/vertex-array-base.ts/gfx/base-geom.ts for why (this chain-invokes
+// SceneNode via `.call()`).
+interface TextLabel extends ISceneNode {
+  _options: ResolvedTextLabelOptions;
+  _pos: vec3;
+  _interleavedBuffer: WebGLBuffer;
+  _interleavedData: Float32Array;
+  _texture: WebGLTexture;
+  _xScale: number;
+  _yScale: number;
+  _width: number;
+  _height: number;
+  _ready: boolean;
+
+  _setupTextParameters(ctx: CanvasRenderingContext2D): void;
+  _prepareText(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, text: string): void;
+  _textureFromCanvas(targetTexture: WebGLTexture, srcCanvas: HTMLCanvasElement): void;
+  bind(): void;
+}
+
+interface TextLabelConstructor {
+  new (
+    gl: WebGLRenderingContext, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D,
+    pos: vec3, text: string, options?: TextLabelOptions,
+  ): TextLabel;
+  (
+    this: TextLabel, gl: WebGLRenderingContext, canvas: HTMLCanvasElement,
+    context: CanvasRenderingContext2D, pos: vec3, text: string, options?: TextLabelOptions,
+  ): void;
+  prototype: TextLabel;
+}
+
+const TextLabel = function(
+  this: TextLabel, gl: WebGLRenderingContext, canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D, pos: vec3, text: string, options?: TextLabelOptions,
+) {
+  (SceneNode as unknown as (this: TextLabel, gl: WebGLRenderingContext) => void).call(this, gl);
+  const opts = options || {};
+  this._options = {
+    fillStyle: opts.fillStyle || '#000',
+    backgroundAlpha: opts.backgroundAlpha || 0.0,
+    fontSize: opts.fontSize || 24,
+    font: opts.font || 'Verdana',
+    fontStyle: opts.fontStyle || 'normal',
+    fontColor: opts.fontColor || '#000',
+  };
   this._order = 100;
   this._pos = pos;
-  this._interleavedBuffer = this._gl.createBuffer();
+  this._interleavedBuffer = this._gl.createBuffer()!;
   this._interleavedData = new Float32Array(5 * 6);
 
   this._prepareText(canvas, context, text);
 
-  var halfWidth = 0.5;
-  var halfHeight = 0.5;
+  const halfWidth = 0.5;
+  const halfHeight = 0.5;
   this._interleavedData[0] = pos[0];
   this._interleavedData[1] = pos[1];
   this._interleavedData[2] = pos[2];
@@ -75,40 +143,32 @@ function TextLabel(gl, canvas, context, pos, text, options) {
   this._interleavedData[27] = pos[2];
   this._interleavedData[28] = halfWidth;
   this._interleavedData[29] = halfHeight;
-}
-
-function smallestPowerOfTwo(size) {
-  var s = 1;
-  while (s < size) {
-    s *= 2;
-  }
-  return s;
-}
+} as unknown as TextLabelConstructor;
 
 utils.derive(TextLabel, SceneNode, {
-  updateProjectionIntervals : function() {
+  updateProjectionIntervals: function(this: TextLabel) {
     // text labels don't affect the projection interval. Don't do anything.
   },
 
-  updateSquaredSphereRadius : function(center, radius) { 
-    // text labels don't affect the bounding spheres. 
+  updateSquaredSphereRadius: function(this: TextLabel, center: vec3, radius: number | null) {
+    // text labels don't affect the bounding spheres.
     return radius;
   },
 
 
-  _setupTextParameters : function(ctx) {
+  _setupTextParameters: function(this: TextLabel, ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = this._options.fontColor;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
-    ctx.font = this._options.fontStyle + ' ' + 
+    ctx.font = this._options.fontStyle + ' ' +
                this._options.fontSize + 'px '+
                this._options.font;
   },
 
-  _prepareText : function(canvas, ctx, text) {
+  _prepareText: function(this: TextLabel, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, text: string) {
     this._setupTextParameters(ctx);
-    var estimatedWidth = ctx.measureText(text).width;
-    var estimatedHeight = this._options.fontSize;
+    const estimatedWidth = ctx.measureText(text).width;
+    const estimatedHeight = this._options.fontSize;
     canvas.width = smallestPowerOfTwo(estimatedWidth);
     canvas.height = smallestPowerOfTwo(estimatedHeight);
     ctx.fillStyle = this._options.fillStyle;
@@ -117,7 +177,6 @@ utils.derive(TextLabel, SceneNode, {
     this._setupTextParameters(ctx);
     ctx.globalAlpha = 1.0;
     ctx.lineWidth = 0.5;
-    ctx.lineStyle = 'none';
     ctx.fillText(text, 0, canvas.height);
     ctx.strokeText(text, 0, canvas.height);
     /*
@@ -131,7 +190,7 @@ utils.derive(TextLabel, SceneNode, {
       }
     }
     */
-    this._texture = this._gl.createTexture();
+    this._texture = this._gl.createTexture()!;
     this._textureFromCanvas(this._texture, canvas);
     // these two variables give us the use portion of the canvas.
     this._xScale = estimatedWidth / canvas.width;
@@ -140,11 +199,11 @@ utils.derive(TextLabel, SceneNode, {
     this._height = estimatedHeight;
   },
 
-  _textureFromCanvas : function(targetTexture, srcCanvas) {
-    var gl = this._gl;
+  _textureFromCanvas: function(this: TextLabel, targetTexture: WebGLTexture, srcCanvas: HTMLCanvasElement) {
+    const gl = this._gl;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.bindTexture(gl.TEXTURE_2D, targetTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, 
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
                   gl.UNSIGNED_BYTE, srcCanvas);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -152,8 +211,8 @@ utils.derive(TextLabel, SceneNode, {
     gl.bindTexture(gl.TEXTURE_2D, null);
   },
 
-  bind : function() {
-    var gl = this._gl;
+  bind: function(this: TextLabel) {
+    const gl = this._gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this._interleavedBuffer);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
@@ -164,7 +223,7 @@ utils.derive(TextLabel, SceneNode, {
     this._ready = true;
   },
 
-  draw : function(cam, shaderCatalog, style, pass) {
+  draw: function(this: TextLabel, cam: Cam, shaderCatalog: ShaderCatalog, style: unknown, pass: unknown) {
     if (!this._visible) {
       return;
     }
@@ -172,11 +231,11 @@ utils.derive(TextLabel, SceneNode, {
     if (pass !== 'normal') {
       return;
     }
-    var shader = shaderCatalog.text;
-    cam.bind(shader);
+    const shader = shaderCatalog.text;
+    cam.bind(shader as never);
     this.bind();
-    var gl = this._gl;
-    var factor = cam.upsamplingFactor();
+    const gl = this._gl;
+    const factor = cam.upsamplingFactor();
     gl.uniform1f(gl.getUniformLocation(shader, 'xScale'), this._xScale);
     gl.uniform1f(gl.getUniformLocation(shader, 'yScale'), this._yScale);
     gl.uniform1f(gl.getUniformLocation(shader, 'width'),
@@ -184,10 +243,10 @@ utils.derive(TextLabel, SceneNode, {
     gl.uniform1f(gl.getUniformLocation(shader, 'height'),
                  factor * 2.0*this._height/cam.viewportHeight());
     gl.uniform1i(gl.getUniformLocation(shader, 'sampler'), 0);
-    var vertAttrib = gl.getAttribLocation(shader, 'attrCenter');
+    const vertAttrib = gl.getAttribLocation(shader, 'attrCenter');
     gl.enableVertexAttribArray(vertAttrib);
     gl.vertexAttribPointer(vertAttrib, 3, gl.FLOAT, false, 5 * 4, 0 * 4);
-    var texAttrib = gl.getAttribLocation(shader, 'attrCorner');
+    const texAttrib = gl.getAttribLocation(shader, 'attrCorner');
     gl.vertexAttribPointer(texAttrib, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
     gl.enableVertexAttribArray(texAttrib);
     gl.enable(gl.BLEND);
@@ -197,7 +256,6 @@ utils.derive(TextLabel, SceneNode, {
     gl.disableVertexAttribArray(texAttrib);
     gl.disable(gl.BLEND);
   }
-});
+} as Partial<TextLabel>);
 
 export default TextLabel;
-

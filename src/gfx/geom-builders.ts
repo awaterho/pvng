@@ -21,9 +21,17 @@
 // contains classes for constructing geometry for spheres, cylinders and tubes.
 import { vec3, mat3 } from 'gl-matrix';
 import geom from '../geom';
-import IVA from './indexed-vertex-array';
 
-type IndexedVertexArray = InstanceType<typeof IVA>;
+// Structural typing for whatever vertex sink addTransformed() writes into:
+// usually a real IndexedVertexArray, but gfx/custom-mesh.ts also uses a
+// DynamicIndexedVertexArray that only implements these three methods (it
+// doesn't know the final vertex/index counts up front, so it can't be a
+// real IndexedVertexArray, which pre-allocates fixed-size typed arrays).
+interface IndexedVertexArray {
+  numVerts(): number;
+  addVertex(pos: ArrayLike<number>, normal: ArrayLike<number>, color: ArrayLike<number>, objId: number): void;
+  addTriangle(idx1: number, idx2: number, idx3: number): void;
+}
 type RGBA = ArrayLike<number>;
 
 class ProtoSphere {

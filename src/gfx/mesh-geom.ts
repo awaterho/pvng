@@ -70,7 +70,7 @@ interface MGChain {
 // gfx/vertex-array-base.ts/gfx/base-geom.ts for why (this chain-invokes
 // BaseGeom via `.call()`, and gfx/billboard-geom.js, not yet converted,
 // chain-invokes this the same way).
-interface MeshGeom extends IBaseGeom {
+export interface MeshGeom extends IBaseGeom {
   _indexedVAs: IndexedVA[];
   _float32Allocator: unknown;
   _uint16Allocator: Uint16AllocatorLike;

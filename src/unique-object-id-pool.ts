@@ -19,7 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 // A continous range of object identifiers.
-class ContinuousIdRange<T> {
+export class ContinuousIdRange<T> {
   _pool: UniqueObjectIdPool<T>;
   _start: number;
   _next: number;
