@@ -32,7 +32,7 @@
 // Cam/shaderCatalog/style/pass aren't typed precisely yet (their modules are
 // later tiers of the TS conversion); BaseGeom and other subclasses override
 // draw() with the real per-geometry-type logic.
-interface SceneNode {
+export interface SceneNode {
   _children: SceneNode[];
   _visible: boolean;
   _name: string;

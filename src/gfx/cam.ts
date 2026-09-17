@@ -29,7 +29,7 @@ type GLWithViewport = WebGLRenderingContext & {
 // Structural typing for the compiled shader program object (canvas.ts's
 // initShader, not yet converted): the various uniform locations Cam.bind()
 // sets every frame, plus the per-shader state-change-tracking stateId.
-interface ShaderProgram extends WebGLProgram {
+export interface ShaderProgram extends WebGLProgram {
   modelview: WebGLUniformLocation;
   projection: WebGLUniformLocation;
   rotation: WebGLUniformLocation | null;

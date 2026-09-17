@@ -42,7 +42,7 @@ interface AssocView {
   containsResidue(residue: unknown): boolean;
 }
 
-interface AssocStructure extends ColorObj {
+export interface AssocStructure extends ColorObj {
   backboneTraces(): AssocTrace[];
 }
 
@@ -71,8 +71,8 @@ interface AtomAssocEntry {
   vertEnd: number;
 }
 
-class AtomVertexAssoc {
-  private _structure: AssocStructure;
+export class AtomVertexAssoc {
+  _structure: AssocStructure;
   private _assocs: AtomAssocEntry[];
   private _callBeginEnd: boolean;
 
@@ -179,8 +179,8 @@ interface TraceAssocEntry {
 }
 
 // handles the association between a trace element, and sets of vertices.
-class TraceVertexAssoc {
-  private _structure: AssocStructure;
+export class TraceVertexAssoc {
+  _structure: AssocStructure;
   private _assocs: TraceAssocEntry[];
   private _callBeginEnd: boolean;
   private _interpolation: number;
