@@ -28,12 +28,12 @@ class FrameBuffer {
   private _height: number;
   private _colorBufferWidth: number;
   private _colorBufferHeight: number;
-  private _gl: WebGLRenderingContext;
+  private _gl: WebGL2RenderingContext;
   private _colorHandle: WebGLFramebuffer;
   private _depthHandle: WebGLRenderbuffer;
   private _colorTexture: WebGLTexture;
 
-  constructor(gl: WebGLRenderingContext, options: FrameBufferOptions) {
+  constructor(gl: WebGL2RenderingContext, options: FrameBufferOptions) {
     this._width = options.width;
     this._height = options.height;
     this._colorBufferWidth = this._width;

@@ -60,13 +60,13 @@ export interface LineGeom extends IBaseGeom {
 }
 
 interface LineGeomConstructor {
-  new (gl: WebGLRenderingContext, float32Allocator: unknown): LineGeom;
-  (this: LineGeom, gl: WebGLRenderingContext, float32Allocator: unknown): void;
+  new (gl: WebGL2RenderingContext, float32Allocator: unknown): LineGeom;
+  (this: LineGeom, gl: WebGL2RenderingContext, float32Allocator: unknown): void;
   prototype: LineGeom;
 }
 
-const LineGeom = function(this: LineGeom, gl: WebGLRenderingContext, float32Allocator: unknown) {
-  (BaseGeom as unknown as (this: LineGeom, gl: WebGLRenderingContext) => void).call(this, gl);
+const LineGeom = function(this: LineGeom, gl: WebGL2RenderingContext, float32Allocator: unknown) {
+  (BaseGeom as unknown as (this: LineGeom, gl: WebGL2RenderingContext) => void).call(this, gl);
   this._vertArrays = [];
   this._float32Allocator = float32Allocator;
   this._lineWidth = 0.5;

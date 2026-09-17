@@ -45,7 +45,7 @@ interface Interval {
 // here but must be provided by whichever subclass sets up the vertex layout
 // (gfx/vertex-array.ts, gfx/indexed-vertex-array.ts).
 interface VertexArrayBase {
-  _gl: WebGLRenderingContext;
+  _gl: WebGL2RenderingContext;
   _vertBuffer: WebGLBuffer;
   _float32Allocator: PoolAllocatorLike;
   _ready: boolean;
@@ -75,16 +75,16 @@ interface VertexArrayBase {
 }
 
 interface VertexArrayBaseConstructor {
-  new (gl: WebGLRenderingContext, numVerts: number, float32Allocator: PoolAllocatorLike): VertexArrayBase;
+  new (gl: WebGL2RenderingContext, numVerts: number, float32Allocator: PoolAllocatorLike): VertexArrayBase;
   (
-    this: VertexArrayBase, gl: WebGLRenderingContext, numVerts: number,
+    this: VertexArrayBase, gl: WebGL2RenderingContext, numVerts: number,
     float32Allocator: PoolAllocatorLike,
   ): void;
   prototype: VertexArrayBase;
 }
 
 const VertexArrayBase = function(
-  this: VertexArrayBase, gl: WebGLRenderingContext, numVerts: number,
+  this: VertexArrayBase, gl: WebGL2RenderingContext, numVerts: number,
   float32Allocator: PoolAllocatorLike,
 ) {
   this._gl = gl;

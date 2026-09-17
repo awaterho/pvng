@@ -48,20 +48,20 @@ interface LineChainData extends InstanceType<typeof VertexArray> {
 }
 
 interface LineChainDataConstructor {
-  new (chain: unknown, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown): LineChainData;
+  new (chain: unknown, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown): LineChainData;
   (
-    this: LineChainData, chain: unknown, gl: WebGLRenderingContext, numVerts: number,
+    this: LineChainData, chain: unknown, gl: WebGL2RenderingContext, numVerts: number,
     float32Allocator: unknown,
   ): void;
   prototype: LineChainData;
 }
 
 const LineChainData = function(
-  this: LineChainData, chain: unknown, gl: WebGLRenderingContext, numVerts: number,
+  this: LineChainData, chain: unknown, gl: WebGL2RenderingContext, numVerts: number,
   float32Allocator: unknown,
 ) {
   (VertexArray as unknown as (
-    this: LineChainData, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown
+    this: LineChainData, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown
   ) => void).call(this, gl, numVerts, float32Allocator);
   this._chain = chain;
 } as unknown as LineChainDataConstructor;
@@ -88,22 +88,22 @@ interface MeshChainData extends InstanceType<typeof IndexedVertexArray> {
 
 interface MeshChainDataConstructor {
   new (
-    chain: unknown, gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+    chain: unknown, gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
     float32Allocator: unknown, uint16Allocator: unknown,
   ): MeshChainData;
   (
-    this: MeshChainData, chain: unknown, gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+    this: MeshChainData, chain: unknown, gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
     float32Allocator: unknown, uint16Allocator: unknown,
   ): void;
   prototype: MeshChainData;
 }
 
 const MeshChainData = function(
-  this: MeshChainData, chain: unknown, gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+  this: MeshChainData, chain: unknown, gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
   float32Allocator: unknown, uint16Allocator: unknown,
 ) {
   (IndexedVertexArray as unknown as (
-    this: MeshChainData, gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+    this: MeshChainData, gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
     float32Allocator: unknown, uint16Allocator: unknown,
   ) => void).call(this, gl, numVerts, numIndices, float32Allocator, uint16Allocator);
   this._chain = chain;

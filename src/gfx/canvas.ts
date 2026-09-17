@@ -30,7 +30,7 @@ interface CanvasOptions {
   forceManualAntialiasing?: boolean;
 }
 
-function isWebGLSupported(gl?: WebGLRenderingContext | null): boolean {
+function isWebGLSupported(gl?: WebGL2RenderingContext | null): boolean {
   if (document.readyState !== "complete" &&
       (document.readyState as string) !== "loaded" &&
       document.readyState !== "interactive") {
@@ -40,8 +40,8 @@ function isWebGLSupported(gl?: WebGLRenderingContext | null): boolean {
   if (gl === undefined) {
     try {
       const canvas = document.createElement("canvas");
-      return !!  (window.WebGLRenderingContext &&
-          canvas.getContext("experimental-webgl"));
+      return !!  (window.WebGL2RenderingContext &&
+          canvas.getContext("webgl2"));
     } catch(e) {
       return false;
     }
@@ -127,7 +127,7 @@ class Canvas {
         antialias : this._antialias && !this._forceManualAntialiasing,
         preserveDrawingBuffer : true // for image export
       };
-      this._gl = this._canvas.getContext('experimental-webgl', contextOpts) as unknown as GLWithViewport;
+      this._gl = this._canvas.getContext('webgl2', contextOpts) as unknown as GLWithViewport;
     }
     catch (err) {
       console.error('WebGL not supported', err);

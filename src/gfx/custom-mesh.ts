@@ -145,21 +145,21 @@ export interface CustomMesh extends ISceneNode {
 
 interface CustomMeshConstructor {
   new (
-    name: string, gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: unknown,
+    name: string, gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: unknown,
     idPool: UniqueObjectIdPool<ObjectIdData>,
   ): CustomMesh;
   (
-    this: CustomMesh, name: string, gl: WebGLRenderingContext, float32Allocator: unknown,
+    this: CustomMesh, name: string, gl: WebGL2RenderingContext, float32Allocator: unknown,
     uint16Allocator: unknown, idPool: UniqueObjectIdPool<ObjectIdData>,
   ): void;
   prototype: CustomMesh;
 }
 
 const CustomMesh = function(
-  this: CustomMesh, name: string, gl: WebGLRenderingContext, float32Allocator: unknown,
+  this: CustomMesh, name: string, gl: WebGL2RenderingContext, float32Allocator: unknown,
   uint16Allocator: unknown, idPool: UniqueObjectIdPool<ObjectIdData>,
 ) {
-  (SceneNode as unknown as (this: CustomMesh, gl: WebGLRenderingContext) => void).call(this, gl);
+  (SceneNode as unknown as (this: CustomMesh, gl: WebGL2RenderingContext) => void).call(this, gl);
   this._float32Allocator = float32Allocator;
   this._uint16Allocator = uint16Allocator;
   this._data = new DynamicIndexedVertexArray();

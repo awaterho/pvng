@@ -43,16 +43,16 @@ import slab from './slab';
 // property is only known to be one specific function from inside render.ts
 // itself); this describes the shape actually used here.
 interface RenderModule {
-  spheres(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  billboardedSpheres(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  ballsAndSticks(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  points(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  lines(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  lineTrace(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  sline(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  trace(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  cartoon(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
-  surface(data: DataView, gl: WebGLRenderingContext, opts: RenderOptions): BaseGeom;
+  spheres(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  billboardedSpheres(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  ballsAndSticks(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  points(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  lines(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  lineTrace(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  sline(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  trace(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  cartoon(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  surface(data: DataView, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
 }
 const render = renderModuleRaw as unknown as RenderModule;
 
@@ -142,7 +142,7 @@ function isiOS(): boolean {
 function isAndroid(): boolean {
   return (/Android/ig).test(navigator.userAgent);
 }
-function shouldUseHighPrecision(gl: WebGLRenderingContext): boolean {
+function shouldUseHighPrecision(gl: WebGL2RenderingContext): boolean {
   // high precision for shaders is only required on iOS, all the other browsers
   // are doing just fine with mediump.
   const highp = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT)!;
@@ -433,7 +433,7 @@ class Viewer {
     this.resize(parentRect.width, parentRect.height);
   }
 
-  gl(): WebGLRenderingContext {
+  gl(): WebGL2RenderingContext {
     return this._canvas!.gl();
   }
 

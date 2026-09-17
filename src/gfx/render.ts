@@ -237,7 +237,7 @@ const spheresForChain = (function() {
   };
 })();
 
-exports.spheres = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.spheres = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('spheres');
   const protoSphere = new ProtoSphere(opts.sphereDetail, opts.sphereDetail);
   opts.protoSphere = protoSphere;
@@ -285,7 +285,7 @@ const billboardedSpheresForChain = (function() {
   };
 })();
 
-exports.billboardedSpheres = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.billboardedSpheres = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('billboardedSpheres');
   const geom = new BillboardGeomCtor(gl, opts.float32Allocator,
                                opts.uint16Allocator);
@@ -357,7 +357,7 @@ const ballsAndSticksForChain = (function() {
   };
 })();
 
-exports.ballsAndSticks = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.ballsAndSticks = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('ballsAndSticks');
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
   const protoSphere = new ProtoSphere(opts.sphereDetail, opts.sphereDetail);
@@ -400,7 +400,7 @@ const pointsForChain = (function () {
 })();
 
 
-exports.points = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.points = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('points');
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
   opts.color.begin(structure as never);
@@ -465,7 +465,7 @@ const linesForChain = (function () {
 })();
 
 
-exports.lines = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.lines = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('lines');
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
   opts.color.begin(structure as never);
@@ -562,7 +562,7 @@ const lineTraceForChain = function(lineGeom: LineGeom, vertAssoc: InstanceType<t
 //
 //  * Curvature of trace subsets must be based on the full backbone trace.
 //--------------------------------------------------------------------------
-exports.lineTrace = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.lineTrace = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
 
 
   console.time('lineTrace');
@@ -670,7 +670,7 @@ const slineForChain = function(lineGeom: LineGeom, vertAssoc: InstanceType<typeo
   return traceIndex;
 };
 
-exports.sline = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.sline = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('sline');
   opts.color.begin(structure as never);
   const vertAssoc =
@@ -722,7 +722,7 @@ const traceForChain = function(meshGeom: MeshGeom, vertAssoc: InstanceType<typeo
   return traceIndex;
 };
 
-exports.trace = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.trace = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('trace');
 
   opts.protoCyl = new ProtoCylinder(opts.arcDetail);
@@ -868,7 +868,7 @@ const cartoonForChain = function(
   return traceIndex;
 };
 
-exports.cartoon = function(structure: RenderStructure, gl: WebGLRenderingContext, opts: RenderOptions) {
+exports.cartoon = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
   console.time('cartoon');
   opts.arrowSkip = Math.floor(opts.splineDetail * 3 / 4);
   opts.coilProfile = new TubeProfile(COIL_POINTS, opts.arcDetail, 1.0);
@@ -908,7 +908,7 @@ exports.cartoon = function(structure: RenderStructure, gl: WebGLRenderingContext
 exports.surface = (function() {
   const pos = vec3.create(), normal = vec3.create(),
       color = vec4.fromValues(0.8, 0.8, 0.8, 1.0);
-  return function(data: DataView, gl: WebGLRenderingContext, opts: RenderOptions) {
+  return function(data: DataView, gl: WebGL2RenderingContext, opts: RenderOptions) {
     let offset = 0;
     /*var version = */data.getUint32(0);
     offset += 4;

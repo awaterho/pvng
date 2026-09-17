@@ -33,18 +33,18 @@ interface ShaderCatalog {
 export type BillboardGeom = IMeshGeom;
 
 interface BillboardGeomConstructor {
-  new (gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: unknown): BillboardGeom;
+  new (gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: unknown): BillboardGeom;
   (
-    this: BillboardGeom, gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: unknown,
+    this: BillboardGeom, gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: unknown,
   ): void;
   prototype: BillboardGeom;
 }
 
 const BillboardGeom = function(
-  this: BillboardGeom, gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: unknown,
+  this: BillboardGeom, gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: unknown,
 ) {
   (MeshGeom as unknown as (
-    this: BillboardGeom, gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: unknown
+    this: BillboardGeom, gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: unknown
   ) => void).call(this, gl, float32Allocator, uint16Allocator);
 } as unknown as BillboardGeomConstructor;
 

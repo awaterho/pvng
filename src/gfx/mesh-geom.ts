@@ -88,15 +88,15 @@ export interface MeshGeom extends IBaseGeom {
 }
 
 interface MeshGeomConstructor {
-  new (gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike): MeshGeom;
-  (this: MeshGeom, gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike): void;
+  new (gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike): MeshGeom;
+  (this: MeshGeom, gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike): void;
   prototype: MeshGeom;
 }
 
 const MeshGeom = function(
-  this: MeshGeom, gl: WebGLRenderingContext, float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike,
+  this: MeshGeom, gl: WebGL2RenderingContext, float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike,
 ) {
-  (BaseGeom as unknown as (this: MeshGeom, gl: WebGLRenderingContext) => void).call(this, gl);
+  (BaseGeom as unknown as (this: MeshGeom, gl: WebGL2RenderingContext) => void).call(this, gl);
   this._indexedVAs = [ ];
   this._float32Allocator = float32Allocator;
   this._uint16Allocator = uint16Allocator;

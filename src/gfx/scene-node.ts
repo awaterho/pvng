@@ -36,7 +36,7 @@ export interface SceneNode {
   _children: SceneNode[];
   _visible: boolean;
   _name: string;
-  _gl: WebGLRenderingContext;
+  _gl: WebGL2RenderingContext;
   _order: number;
 
   order(order?: number): number;
@@ -50,12 +50,12 @@ export interface SceneNode {
 }
 
 interface SceneNodeConstructor {
-  new (gl: WebGLRenderingContext): SceneNode;
-  (this: SceneNode, gl: WebGLRenderingContext): void;
+  new (gl: WebGL2RenderingContext): SceneNode;
+  (this: SceneNode, gl: WebGL2RenderingContext): void;
   prototype: SceneNode;
 }
 
-const SceneNode = function(this: SceneNode, gl: WebGLRenderingContext) {
+const SceneNode = function(this: SceneNode, gl: WebGL2RenderingContext) {
   this._children = [];
   this._visible = true;
   this._name = '';

@@ -148,13 +148,13 @@ export interface BaseGeom extends ISceneNode {
 }
 
 interface BaseGeomConstructor {
-  new (gl: WebGLRenderingContext): BaseGeom;
-  (this: BaseGeom, gl: WebGLRenderingContext): void;
+  new (gl: WebGL2RenderingContext): BaseGeom;
+  (this: BaseGeom, gl: WebGL2RenderingContext): void;
   prototype: BaseGeom;
 }
 
-const BaseGeom = function(this: BaseGeom, gl: WebGLRenderingContext) {
-  (SceneNode as unknown as (this: BaseGeom, gl: WebGLRenderingContext) => void).call(this, gl);
+const BaseGeom = function(this: BaseGeom, gl: WebGL2RenderingContext) {
+  (SceneNode as unknown as (this: BaseGeom, gl: WebGL2RenderingContext) => void).call(this, gl);
   this._idRanges = [];
   this._vertAssocs = [];
   this._showRelated = null;

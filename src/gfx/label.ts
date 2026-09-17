@@ -75,21 +75,21 @@ export interface TextLabel extends ISceneNode {
 
 interface TextLabelConstructor {
   new (
-    gl: WebGLRenderingContext, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D,
+    gl: WebGL2RenderingContext, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D,
     pos: vec3, text: string, options?: TextLabelOptions,
   ): TextLabel;
   (
-    this: TextLabel, gl: WebGLRenderingContext, canvas: HTMLCanvasElement,
+    this: TextLabel, gl: WebGL2RenderingContext, canvas: HTMLCanvasElement,
     context: CanvasRenderingContext2D, pos: vec3, text: string, options?: TextLabelOptions,
   ): void;
   prototype: TextLabel;
 }
 
 const TextLabel = function(
-  this: TextLabel, gl: WebGLRenderingContext, canvas: HTMLCanvasElement,
+  this: TextLabel, gl: WebGL2RenderingContext, canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D, pos: vec3, text: string, options?: TextLabelOptions,
 ) {
-  (SceneNode as unknown as (this: TextLabel, gl: WebGLRenderingContext) => void).call(this, gl);
+  (SceneNode as unknown as (this: TextLabel, gl: WebGL2RenderingContext) => void).call(this, gl);
   const opts = options || {};
   this._options = {
     fillStyle: opts.fillStyle || '#000',

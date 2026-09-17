@@ -52,16 +52,16 @@ interface VertexArray extends VertexArrayBase {
 }
 
 interface VertexArrayConstructor {
-  new (gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown): VertexArray;
-  (this: VertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown): void;
+  new (gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown): VertexArray;
+  (this: VertexArray, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown): void;
   prototype: VertexArray;
 }
 
 const VertexArray = function(
-  this: VertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown,
+  this: VertexArray, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown,
 ) {
   (VertexArrayBase as unknown as (
-    this: VertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown
+    this: VertexArray, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown
   ) => void).call(this, gl, numVerts, float32Allocator);
   this._numVerts = 0;
   this._primitiveType = this._gl.LINES;

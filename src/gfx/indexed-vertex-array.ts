@@ -69,22 +69,22 @@ interface IndexedVertexArray extends VertexArrayBase {
 
 interface IndexedVertexArrayConstructor {
   new (
-    gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+    gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
     float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike,
   ): IndexedVertexArray;
   (
-    this: IndexedVertexArray, gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+    this: IndexedVertexArray, gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
     float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike,
   ): void;
   prototype: IndexedVertexArray;
 }
 
 const IndexedVertexArray = function(
-  this: IndexedVertexArray, gl: WebGLRenderingContext, numVerts: number, numIndices: number,
+  this: IndexedVertexArray, gl: WebGL2RenderingContext, numVerts: number, numIndices: number,
   float32Allocator: unknown, uint16Allocator: Uint16AllocatorLike,
 ) {
   (VertexArrayBase as unknown as (
-    this: IndexedVertexArray, gl: WebGLRenderingContext, numVerts: number, float32Allocator: unknown
+    this: IndexedVertexArray, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown
   ) => void).call(this, gl, numVerts, float32Allocator);
   this._indexBuffer = gl.createBuffer()!;
   this._uint16Allocator = uint16Allocator;

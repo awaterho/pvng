@@ -21,7 +21,7 @@ import { vec3, vec4, mat3, mat4 } from 'gl-matrix';
 
 // canvas.ts (not yet converted) stashes the viewport size directly on the
 // GL context object.
-export type GLWithViewport = WebGLRenderingContext & {
+export type GLWithViewport = WebGL2RenderingContext & {
   viewportWidth: number;
   viewportHeight: number;
 };
