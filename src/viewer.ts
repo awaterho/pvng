@@ -283,7 +283,6 @@ interface ResolvedViewerOptions {
   doubleClick: ClickHandler;
   click: ClickHandler;
   fog: boolean;
-  transparency: string;
   noKeyboardGrab: boolean;
   arcDetail?: number;
   sphereDetail?: number;
@@ -393,7 +392,6 @@ class Viewer {
       doubleClick : getDoubleClickHandler(opts),
       click : getClickHandler(opts),
       fog : optValue(opts, 'fog', true),
-      transparency : optValue(opts, 'transparency', 'alpha'),
       noKeyboardGrab : optValue(opts, 'noKeyboardGrab', false),
     };
     const parentRect = domElement.getBoundingClientRect();
@@ -459,9 +457,6 @@ class Viewer {
             .setOutlineColorColor(color.forceRGB(value as string | RGBA));
       } else if (optName === 'outlineWidth') {
         this._cam.setOutlineWidth((value as number) + 0.0 /* force to float*/);
-      } else if (optName === 'transparency') {
-        const sd = value === 'screendoor';
-        this._cam.setScreenDoorTransparency(sd);
       }
     }
     return this._options[optName];
@@ -519,8 +514,6 @@ class Viewer {
     this._cam.setUpsamplingFactor(this._canvas!.superSamplingFactor());
     this._cam.setOutlineWidth(this._options.outlineWidth);
     this._cam.setOutlineEnabled(this._options.outline);
-    const sd = this._options.transparency === 'screendoor';
-    this._cam.setScreenDoorTransparency(sd);
     this._cam.fog(this._options.fog);
     this._cam.setFogColor(this._options.background as vec3);
     this._cam.setOutlineColor(this._options.outlineColor as vec3);

@@ -53,18 +53,9 @@ const shaders: ShaderSources = {
 // transparency, selection highlighting etc.
 PRELUDE_FS : '\n\
 precision ${PRECISION} float;\n\
-uniform bool screenDoorTransparency;\n\
 vec4 handleAlpha(vec4 inColor) {\n\
-  if (screenDoorTransparency) {\n\
-    ivec2 pxCoord = ivec2(gl_FragCoord.xy);\n\
-    ivec2 mod = pxCoord - (pxCoord/2) * 2;\n\
-    if (inColor.a < 0.99 &&\n\
-        (inColor.a < 0.01 || mod.x != 0 || mod.y != 0)) { discard; }\n\
-    return vec4(inColor.rgb, 1.0);\n\
-  } else {\n\
-    if (inColor.a == 0.0) { discard; }\n\
-    return inColor;\n\
-  } \n\
+  if (inColor.a == 0.0) { discard; }\n\
+  return inColor;\n\
 } \n\
 \n\
 int intMod(int x, int y) { \n\

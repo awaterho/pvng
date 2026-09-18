@@ -42,7 +42,6 @@ export interface ShaderProgram extends WebGLProgram {
   selectionColor: WebGLUniformLocation;
   relativePixelSize: WebGLUniformLocation;
   outlineWidth: WebGLUniformLocation;
-  screenDoorTransparency: WebGLUniformLocation;
   outlineEnabled: WebGLUniformLocation;
   stateId: number;
 }
@@ -105,7 +104,6 @@ class Cam {
   private _selectionColor: vec4;
   private _center: vec3;
   private _zoom: number;
-  private _screenDoorTransparency: boolean;
   private _updateProjectionMat: boolean;
   private _updateModelViewMat: boolean;
   private _upsamplingFactor: number;
@@ -136,7 +134,6 @@ class Cam {
     this._selectionColor = vec4.fromValues(0.1, 1.0, 0.1, 0.7);
     this._center = vec3.create();
     this._zoom = 50;
-    this._screenDoorTransparency = false;
     this._updateProjectionMat = true;
     this._updateModelViewMat = true;
     this._upsamplingFactor = 1;
@@ -155,11 +152,6 @@ class Cam {
 
   setOutlineEnabled(value: boolean): void {
     this._outlineEnabled = value;
-    this._incrementStateId();
-  }
-
-  setScreenDoorTransparency(value: boolean): void {
-    this._screenDoorTransparency = value;
     this._incrementStateId();
   }
 
@@ -469,7 +461,6 @@ class Cam {
     gl.uniform4fv(shader.selectionColor, this._selectionColor);
     gl.uniform2fv(shader.relativePixelSize, this._relativePixelSize);
     gl.uniform1f(shader.outlineWidth, this._outlineWidth);
-    gl.uniform1i(shader.screenDoorTransparency, this._screenDoorTransparency ? 1 : 0);
     gl.uniform1i(shader.outlineEnabled, this._outlineEnabled ? 1 : 0);
   }
 }
