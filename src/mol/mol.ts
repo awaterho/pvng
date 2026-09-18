@@ -452,9 +452,8 @@ class Mol extends MolBase<Chain> {
   // same residue, peptide bonds and nucleotides
   deriveConnectivity(): void {
     console.time('Mol.deriveConnectivity');
-    const thisStructure = this;
     let prevResidue: (ConnectableResidue & { _deduceType(): void; isAminoacid(): boolean; isNucleotide(): boolean }) | null = null;
-    this.eachResidue(function(res) {
+    this.eachResidue((res) => {
       const residue = res as ConnectableResidue & {
         _deduceType(): void; atoms(): (MolAtomLike & { element(): string })[];
       };
@@ -472,17 +471,17 @@ class Mol extends MolBase<Chain> {
           const lower = covalentI+covalentJ-0.30;
           const upper = covalentI+covalentJ+0.30;
           if (sqrDist < upper*upper && sqrDist > lower*lower) {
-            thisStructure.connect(atomI as never, atomJ as never);
+            this.connect(atomI as never, atomJ as never);
           }
         }
       }
       residue._deduceType();
       if (prevResidue !== null) {
         if (residue.isAminoacid() && prevResidue.isAminoacid()) {
-          connectPeptides(thisStructure, prevResidue, residue);
+          connectPeptides(this, prevResidue, residue);
         }
         if (residue.isNucleotide() && prevResidue.isNucleotide()) {
-          connectNucleotides(thisStructure, prevResidue, residue);
+          connectNucleotides(this, prevResidue, residue);
         }
       }
       prevResidue = residue;
@@ -561,12 +560,11 @@ class MolView extends MolBase<ChainView> {
   addResidues(
     residues: { chain(): { name(): string; full(): Chain; residues(): unknown[] } }[], recurse?: boolean
   ): Record<string, ChainView> {
-    const that = this;
     const chainsViews: Record<string, ChainView> = {};
-    residues.forEach(function(residue) {
+    residues.forEach((residue) => {
       const chainName = residue.chain().name();
       if (typeof chainsViews[chainName] === 'undefined') {
-        chainsViews[chainName] = that.addChain(residue.chain(), false);
+        chainsViews[chainName] = this.addChain(residue.chain(), false);
       }
       chainsViews[chainName]!.addResidue(residue as never, recurse);
     });

@@ -29,10 +29,10 @@ function svd(A) {
 	for (i=0; i<n; i++) e[i] = q[i] = 0.0;
 
 	var v = [];
-	for (var i = 0; i < n; ++i) {
+	for (i = 0; i < n; ++i) {
 	  var xxx = [];
 	  v.push([]);
-	  for (var j = 0; j < n; ++j) {
+	  for (j = 0; j < n; ++j) {
 	    xxx.push(0);
     }
     v.push(xxx);

@@ -42,7 +42,7 @@ function isWebGLSupported(gl?: WebGL2RenderingContext | null): boolean {
       const canvas = document.createElement("canvas");
       return !!  (window.WebGL2RenderingContext &&
           canvas.getContext("webgl2"));
-    } catch(e) {
+    } catch {
       return false;
     }
   }

@@ -59,13 +59,8 @@ function dcd(structure: TrajStructure, data: DataView): CoordGroup {
   const swapBytes = endianness === 'DROC';
   let current = 92;
   const titleLength = data.getUint32(current, swapBytes);
-  current += 4;
-  let title = '';
+  current += 4 + titleLength;
   let i;
-  for (i = 0; i < titleLength; ++i) {
-    title += String.fromCharCode(data.getUint8(current));
-    current += 1;
-  }
   //var fAtomCount = data.getUint32(4 * 10, swapBytes);
   const numFrames = data.getUint32(4 * 2, swapBytes);
   const format = data.getUint32(4 * 21, swapBytes);

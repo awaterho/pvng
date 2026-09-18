@@ -1242,7 +1242,7 @@ class Viewer {
     if (enable === undefined) {
       return this._rockAndRoll !== null;
     }
-    if (!!enable) {
+    if (enable) {
       if (this._rockAndRoll === null) {
         this._rockAndRoll = anim.rockAndRoll();
         this._animControl.add(this._rockAndRoll as never);

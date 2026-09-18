@@ -179,9 +179,8 @@ class Cam {
   }
 
   private _informOnCameraChangedListeners(): void {
-    const cam = this;
-    this._onCameraChangedListeners.forEach(function(fn) {
-      fn(cam);
+    this._onCameraChangedListeners.forEach((fn) => {
+      fn(this);
     });
   }
 
@@ -435,14 +434,12 @@ class Cam {
   // - fogColor        - the color of fog
   // - outlineColor    - color to be used for the outline shader
   bind(shader: ShaderProgram, additionalTransform?: mat4): void {
-    let shaderChanged = false;
     const gl = this._gl;
     if (this._currentShader !== shader) {
       this._currentShader = shader;
       gl.useProgram(shader);
-      shaderChanged = true;
     }
-    shaderChanged = this._updateIfRequired() || shaderChanged;
+    this._updateIfRequired();
 
     // in case additionalTransform is given, multiply camera model view
     // with the matrix and use the product as the model view matrix.

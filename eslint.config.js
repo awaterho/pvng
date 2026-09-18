@@ -18,11 +18,22 @@ export default tseslint.config(
         setInterval: 'readonly',
         clearInterval: 'readonly',
         Image: 'readonly',
-        WebGLRenderingContext: 'readonly',
+        WebGL2RenderingContext: 'readonly',
       },
     },
     rules: {
       '@typescript-eslint/no-var-requires': 'off',
+    },
+  },
+  {
+    // demo.js/select.js are plain browser scripts that rely on jQuery being
+    // loaded globally via a <script> tag (index.html/select.html), not an
+    // import -- same as window/document/etc. above.
+    files: ['demo.js', 'select.js'],
+    languageOptions: {
+      globals: {
+        $: 'readonly',
+      },
     },
   },
   {

@@ -222,9 +222,8 @@ utils.derive(BaseGeom, SceneNode, {
   },
 
   eachCentralAtom: function(this: BaseGeom, callback: CentralAtomCallback) {
-    const go = this;
-    const structure = go.structure();
-    const assembly = structure.assembly(go.showRelated());
+    const structure = this.structure();
+    const assembly = structure.assembly(this.showRelated());
     // in case there is no assembly, just loop over all the atoms contained
     // in the structure and invoke the callback as is
     if (assembly === null) {

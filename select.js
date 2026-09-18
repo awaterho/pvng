@@ -42,9 +42,9 @@ viewer.on('click', function(picked, ev) {
   var extendSelection = ev.shiftKey;
   var sel;
   if (extendSelection) {
-    var sel = picked.node().selection();
+    sel = picked.node().selection();
   } else {
-    var sel = picked.node().structure().createEmptyView();
+    sel = picked.node().structure().createEmptyView();
   }
   if (!sel.removeAtom(picked.target(), true)) {
     // in case atom was not part of the view, we have to add it, because it 
