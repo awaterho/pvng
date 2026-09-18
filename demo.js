@@ -12,7 +12,7 @@ var structure;
 
 function points() {
   viewer.clear();
-  var go = viewer.points('structure', structure, {
+  viewer.points('structure', structure, {
                          color: color.byResidueProp('num'),
                          showRelated : '1' });
 }
@@ -38,23 +38,23 @@ function cartoon() {
 
 function lineTrace() {
   viewer.clear();
-  var go = viewer.lineTrace('structure', structure, { showRelated : '1' });
+  viewer.lineTrace('structure', structure, { showRelated : '1' });
 }
 
 function spheres() {
   viewer.clear();
-  var go = viewer.spheres('structure', structure, { showRelated : '1' });
+  viewer.spheres('structure', structure, { showRelated : '1' });
 }
 
 function sline() {
   viewer.clear();
-  var go = viewer.sline('structure', structure,
+  viewer.sline('structure', structure,
           { color : color.uniform('red'), showRelated : '1'});
 }
 
 function tube() {
   viewer.clear();
-  var go = viewer.tube('structure', structure);
+  viewer.tube('structure', structure);
   viewer.lines('structure.ca', structure.select({aname :'CA'}),
             { color: color.uniform('blue'), lineWidth : 1,
               showRelated : '1' });
@@ -62,12 +62,12 @@ function tube() {
 
 function trace() {
   viewer.clear();
-  var go = viewer.trace('structure', structure, { showRelated : '1' });
+  viewer.trace('structure', structure, { showRelated : '1' });
 
 }
 function ballsAndSticks() {
   viewer.clear();
-  var go = viewer.ballsAndSticks('structure', structure, { showRelated : '1' });
+  viewer.ballsAndSticks('structure', structure, { showRelated : '1' });
 }
 
 function preset() {
@@ -238,9 +238,9 @@ function ensemble() {
   $('#traj-widget').hide();
   io.fetchPdb('pdbs/1nmr.pdb', function(structures) {
     viewer.clear()
-    structure = structures[i];
+    structure = structures[0];
     for (var i = 0; i < structures.length; ++i) {
-      go = viewer.cartoon('ensemble_'+ i, structures[i]);
+      viewer.cartoon('ensemble_'+ i, structures[i]);
     }
     viewer.autoZoom();
   }, { loadAllModels : true } );
@@ -253,7 +253,9 @@ $('#1ake').click(kinase);
 $('#4ubb').click(polymerase);
 $('#4c46').click(longHelices);
 $('#2f8v').click(telethonin);
+$('#2por').click(porin);
 $('#ensemble').click(ensemble);
+$('#custom-mesh').click(cross);
 $('#style-cartoon').click(cartoon);
 $('#style-tube').click(tube);
 $('#style-line-trace').click(lineTrace);
@@ -272,6 +274,7 @@ $('#phong').click(phong);
 $('#trajectory').click(trajectory);
 $('#hemilight').click(hemilight);
 $('#color-rainbow').click(rainbow);
+$('#color-pro-red').click(proInRed);
 $('#load-from-pdb').change(function() {
   var pdbId = this.value;
   this.value = '';
