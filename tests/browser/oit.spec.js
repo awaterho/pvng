@@ -65,3 +65,8 @@ test('transparency compositing is order-independent', async ({ page }) => {
   expect(pixelA[2]).toBeGreaterThan(0);
   expect(pixelA).toEqual(pixelB);
 });
+
+test('overlapping transparent spheres render matches the baseline', async ({ page }) => {
+  await renderOverlappingSpheres(page, 'red-then-blue');
+  await expect(page.locator('#viewer canvas').first()).toHaveScreenshot('oit-overlapping-spheres.png');
+});
