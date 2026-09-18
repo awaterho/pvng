@@ -89,6 +89,17 @@ function load(pdb_id) {
   }});
 }
 
+// same as load(), but for a structure only available in mmCIF format
+// (pdbs/<cif_id>.cif), exercising io.fetchCif() instead of the PDB path.
+function loadCif(cif_id) {
+  $('#traj-widget').hide();
+  io.fetchCif('pdbs/'+cif_id+'.cif', function(s) {
+    structure = s;
+    preset();
+    viewer.autoZoom();
+  });
+}
+
 function trajectory() {
   viewer.clear();
   $('#traj-widget').show();
@@ -127,6 +138,10 @@ function kinase() {
 
 function crambin() {
   load('1crn');
+}
+
+function crambinCif() {
+  loadCif('1crn');
 }
 
 function transferase() {
@@ -233,6 +248,7 @@ function ensemble() {
 $(document).foundation();
 $('#1r6a').click(transferase);
 $('#1crn').click(crambin);
+$('#1crn-cif').click(crambinCif);
 $('#1ake').click(kinase);
 $('#4ubb').click(polymerase);
 $('#4c46').click(longHelices);
