@@ -12,7 +12,7 @@ window.viewer = viewer;
 
 viewer.options('selectionColor', '#f00');
 
-pv.io.fetchPdb('/pdbs/1crn.pdb', function(s) {
+pv.io.fetchCif('/pdbs/1crn.cif', function(s) {
   viewer.on('viewerReady', function() {
     var go = viewer.spheres('crambin', s, { showRelated: '1'});
     go.setSelection(go.select({rnumRange : [15,20]}));

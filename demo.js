@@ -10,6 +10,23 @@ var color = pv.color;
 
 var structure;
 
+// opacity slider (#opacity-widget): applies to every currently-visible
+// render object that supports it, and is re-applied by preset() whenever a
+// new structure is loaded, so dragging the slider then loading a different
+// structure keeps the same transparency -- a quick way to see the
+// weighted-blended OIT pipeline (viewer.ts's _draw()) composite overlapping
+// translucent cartoon/sphere geometry correctly regardless of draw order.
+var currentOpacity = 1.0;
+function applyOpacity(val) {
+  currentOpacity = val;
+  viewer.forEach(function(go) {
+    if (typeof go.setOpacity === 'function') {
+      go.setOpacity(val);
+    }
+  });
+  viewer.requestRedraw();
+}
+
 function points() {
   viewer.clear();
   viewer.points('structure', structure, {
@@ -76,22 +93,11 @@ function preset() {
   viewer.spheres('structure.ligand', ligand, {
   });
   viewer.cartoon('structure.protein', structure, { boundingSpheres: false });
+  applyOpacity(currentOpacity);
 }
 
-function load(pdb_id) {
-  $('#traj-widget').hide();
-  $.ajax({ url : 'pdbs/'+pdb_id+'.pdb', success : function(data) {
-    structure = io.pdb(data);
-    //mol.assignHelixSheet(structure);
-    preset();
-    //viewer.spheres('helices', structure.select({ aname : 'CA', rtype : 'C'}), { color : color.uniform('red'), radiusMultiplier : 0.3, showRelated : '1' });
-    viewer.autoZoom();
-  }});
-}
-
-// same as load(), but for a structure only available in mmCIF format
-// (pdbs/<cif_id>.cif), exercising io.fetchCif() instead of the PDB path.
-function loadCif(cif_id) {
+// loads a structure from its local mmCIF fixture (pdbs/<id>.cif).
+function load(cif_id) {
   $('#traj-widget').hide();
   io.fetchCif('pdbs/'+cif_id+'.cif', function(s) {
     structure = s;
@@ -138,10 +144,6 @@ function kinase() {
 
 function crambin() {
   load('1crn');
-}
-
-function crambinCif() {
-  loadCif('1crn');
 }
 
 function transferase() {
@@ -236,7 +238,7 @@ function cross() {
 
 function ensemble() {
   $('#traj-widget').hide();
-  io.fetchPdb('pdbs/1nmr.pdb', function(structures) {
+  io.fetchCif('pdbs/1nmr.cif', function(structures) {
     viewer.clear()
     structure = structures[0];
     for (var i = 0; i < structures.length; ++i) {
@@ -248,7 +250,6 @@ function ensemble() {
 $(document).foundation();
 $('#1r6a').click(transferase);
 $('#1crn').click(crambin);
-$('#1crn-cif').click(crambinCif);
 $('#1ake').click(kinase);
 $('#4ubb').click(polymerase);
 $('#4c46').click(longHelices);
@@ -275,17 +276,41 @@ $('#trajectory').click(trajectory);
 $('#hemilight').click(hemilight);
 $('#color-rainbow').click(rainbow);
 $('#color-pro-red').click(proInRed);
-$('#load-from-pdb').change(function() {
-  var pdbId = this.value;
-  this.value = '';
-  this.blur();
-  var url = 'https://files.rcsb.org/download/' + pdbId + '.pdb';
+// fetches and renders a structure by PDB id from RCSB in mmCIF format, used
+// by both pressing Enter/blurring the input (the 'change' event) and
+// clicking the "Get" button next to it.
+function getFromRcsb(pdbId) {
+  if (!pdbId) {
+    return;
+  }
+  var url = 'https://files.rcsb.org/download/' + pdbId + '.cif';
   console.log(url)
-  io.fetchPdb(url, function(s) {
+  io.fetchCif(url, function(s) {
     structure = s;
     cartoon();
     viewer.autoZoom();
   });
+}
+
+$('#load-from-pdb').change(function() {
+  var pdbId = this.value;
+  this.value = '';
+  this.blur();
+  getFromRcsb(pdbId);
+});
+
+$('#get-pdb-button').click(function() {
+  var input = $('#load-from-pdb');
+  var pdbId = input.val();
+  input.val('');
+  input.blur();
+  getFromRcsb(pdbId);
+});
+
+$('#opacity-slider').on('input', function() {
+  var val = parseFloat(this.value);
+  $('#opacity-value').text(val.toFixed(2));
+  applyOpacity(val);
 });
 
 viewer = pv.Viewer(document.getElementById('viewer'), {
