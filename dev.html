@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>pv - JavaScript protein viewer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <script src='js/jquery-2.0.2.min.js'></script>
+    <script src='js/modernizr-2.8.3.min.js'></script>
+    <script src="js/foundation-5.4.7.min.js"></script>
+    <script type="module" src="/demo.js"></script>
+    <link rel='stylesheet' href='css/foundation.css'>
+    <style>
+      body {
+        padding:0px;
+        margin:0px;
+        height: 100%;
+      }
+      #viewer {
+        position:absolute;
+        top : 0px; 
+        left: 0px;
+        bottom : 0px;
+        right : 0px;
+        margin : 0px;
+        padding:0px;
+        overflow:hidden;
+      }
+      #traj-widget {
+        width: 200px;
+        height: 20px;
+        background: #aaa;
+        position: absolute;
+        top: 50px;
+        left: 50px;
+        display: none;
+      }
+      #opacity-widget {
+        position: absolute;
+        top: 50px;
+        right: 20px;
+        background: rgba(255,255,255,0.85);
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: sans-serif;
+        font-size: 13px;
+      }
+      #opacity-widget input {
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+    </style>
+    </head>
+    <body>
+
+<div id="viewer"> 
+<nav class="top-bar" data-topbar role="navigation">
+  <ul class="title-area">
+    <li class="name">
+      <h1><a href="#">PV</a></h1>
+    </li>
+     <!-- Remove the class "menu-icon" to get rid of menu icon. Take out "Menu" to just have icon alone -->
+    <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a></li>
+  </ul>
+
+  <section class="top-bar-section">
+    <!-- Right Nav Section -->
+    <ul class=left>
+<div class="row collapse">
+    <div class="large-8 small-9 columns">
+      <input type="text" id=load-from-pdb placeholder="1ake">
+    </div>
+    <div class="large-4 small-3 columns">
+      <a href="#" id="get-pdb-button" class="alert button expand">Get</a>
+    </div>
+  </div>
+    </ul>
+    <ul class="right">
+      <li class="has-dropdown">
+        <a href="#">Load</a>
+        <ul class="dropdown">
+          <li><a id=1r6a href="#">Methyl Transferase</a></li>
+          <li><a id=4c46 href="#">Long Helices</a></li>
+          <li><a id=2f8v href="#">Telethonin</a></li>
+          <li><a id=1ake href="#">Adenylate Kinase</a></li>
+          <li><a id=4ubb href="#">DNA Polymerase</a></li>
+          <li><a id=1crn href="#">Crambin</a></li>
+          <li><a id=2por href="#">Porin</a></li>
+          <li><a id=ensemble href="#">NMR ensemble</a></li>
+          <li><a id=trajectory href="#">Trajectory</a></li>
+          <li><a id=custom-mesh href="#">Custom Mesh Demo</a></li>
+        </ul>
+      </li>
+      <li class="has-dropdown">
+        <a href="#">Style</a>
+        <ul class="dropdown">
+          <li><a id=style-cartoon href="#">Cartoon</a></li>
+          <li><a id=style-tube href="#">Tube</a></li>
+          <li><a id=style-trace href="#">Trace</a></li>
+          <li><a id=style-line-trace href="#">Line Trace</a></li>
+          <li><a id=style-sline href="#">Smooth Line Trace</a></li>
+          <li><a id=style-lines href="#">Bonds (Lines)</a></li>
+          <li><a id=style-spheres href="#">Spheres</a></li>
+          <li><a id=style-balls-and-sticks href="#">Balls And Sticks</a></li>
+          <li><a id=style-points href="#">Points</a></li>
+        </ul>
+      </li>
+      <li class="has-dropdown">
+        <a href="#">Color</a>
+        <ul class="dropdown">
+          <li><a id=color-uniform href="#">Uniform</a></li>
+          <li><a id=color-chain href="#">Chain</a></li>
+          <li><a id=color-element href="#">Element</a></li>
+          <li><a id=color-ss href="#">Secondary Structure</a></li>
+          <li><a id=color-ss-succ href="#">Secondary Structure Succession</a></li>
+          <li><a id=color-rainbow href="#">Rainbow</a></li>
+          <li><a id="color-pro-red" href="#">Proline in Red</a></li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+</nav>
+</div>
+<div id=traj-widget>
+    <a id=traj-button href="#" class="alert button expand">Start</a>
+</div>
+<div id="opacity-widget">
+  <label for="opacity-slider">Opacity: <span id="opacity-value">1.00</span></label><br>
+  <input type="range" id="opacity-slider" min="0" max="1" step="0.01" value="1">
+</div>
+</body>
+</html>
+

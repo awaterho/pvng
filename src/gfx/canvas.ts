@@ -87,11 +87,20 @@ class Canvas {
     this._realWidth = realWidth;
     this._realHeight = realHeight;
     this._gl.viewport(0, 0, realWidth, realHeight);
+    this._applySize(realWidth, realHeight);
+  }
+
+  // Sets the canvas' drawing-buffer resolution (width/height attributes,
+  // which may be a multiple of the logical size when using manual
+  // supersampled antialiasing) while pinning its CSS layout size to the
+  // logical this._width/this._height. Without an explicit CSS size, the
+  // element's layout box defaults to the (possibly supersampled) attribute
+  // size, e.g. doubling the space it takes up in the page.
+  private _applySize(realWidth: number, realHeight: number): void {
     this._canvas.width = realWidth;
     this._canvas.height = realHeight;
-    if (this._samples > 1) {
-      this._initManualAntialiasing(this._samples);
-    }
+    this._canvas.style.width = this._width + 'px';
+    this._canvas.style.height = this._height + 'px';
   }
 
   // tells the canvas to resize. The resize does not happen immediately but is
@@ -140,21 +149,6 @@ class Canvas {
     return true;
   }
 
-  private _initManualAntialiasing(samples: number): void {
-    const scale_factor = 1.0 / samples;
-    const trans_x = -(1 - scale_factor) * 0.5 * this._realWidth;
-    const trans_y = -(1 - scale_factor) * 0.5 * this._realHeight;
-    const translate = 'translate(' + trans_x + 'px, ' + trans_y + 'px)';
-    const scale = 'scale(' + scale_factor + ', ' + scale_factor + ')';
-    const transform = translate + ' ' + scale;
-
-    this._canvas.style.webkitTransform = transform;
-    this._canvas.style.transform = transform;
-    (this._canvas.style as unknown as { ieTransform: string }).ieTransform = transform;
-    this._canvas.width = this._realWidth;
-    this._canvas.height = this._realHeight;
-  }
-
   initGL(): boolean {
     let samples = 1;
     if (!this._initContext()) {
@@ -169,9 +163,7 @@ class Canvas {
     this._realWidth = this._width * samples;
     this._realHeight = this._height * samples;
     this._samples = samples;
-    if (samples > 1) {
-      this._initManualAntialiasing(samples);
-    }
+    this._applySize(this._realWidth, this._realHeight);
     gl.viewportWidth = this._realWidth;
     gl.viewportHeight = this._realHeight;
 
@@ -308,9 +300,8 @@ class Canvas {
 
   private _initCanvas(): void {
     this._canvas = document.createElement('canvas');
-    this._canvas.width = this._width;
-    this._canvas.height = this._height;
     this._domElement.appendChild(this._canvas);
+    this._applySize(this._width, this._height);
   }
 
   isWebGLSupported(): boolean {

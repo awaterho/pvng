@@ -1,9 +1,15 @@
-import PV from './src/index';
-
 var viewer;
 
-var pv = PV;
-window.pv = pv;
+// demo.html (distribution example) loads dist/pv.iife.js first, which
+// defines the global `pv`. index.html (dev) doesn't build/load that
+// bundle, so fall back to importing the TypeScript source directly --
+// this only works when served through the Vite dev server, which
+// transpiles it on the fly.
+var pv = window.pv;
+if (!pv) {
+  pv = (await import('./src/index')).default;
+  window.pv = pv;
+}
 var io = pv.io;
 var viewpoint = pv.viewpoint;
 var color = pv.color;
@@ -90,7 +96,7 @@ function ballsAndSticks() {
 function preset() {
   viewer.clear();
   var ligand = structure.select({'rnames' : ['SAH', 'RVP']});
-  viewer.spheres('structure.ligand', ligand, {
+  viewer.ballsAndSticks('structure.ligand', ligand, {
   });
   viewer.cartoon('structure.protein', structure, { boundingSpheres: false });
   applyOpacity(currentOpacity);
@@ -211,17 +217,6 @@ function polymerase() {
 };
 
 
-function phong() {
-  viewer.options('style', 'phong');
-  viewer.requestRedraw();
-}
-
-function hemilight() {
-  viewer.options('style', 'hemilight');
-  viewer.requestRedraw();
-}
-
-
 function cross() {
   viewer.clear();
   var go = viewer.customMesh('custom');
@@ -271,9 +266,7 @@ $('#color-element').click(byElement);
 $('#color-chain').click(byChain);
 $('#color-ss-succ').click(ssSuccession);
 $('#color-ss').click(ss);
-$('#phong').click(phong);
 $('#trajectory').click(trajectory);
-$('#hemilight').click(hemilight);
 $('#color-rainbow').click(rainbow);
 $('#color-pro-red').click(proInRed);
 // fetches and renders a structure by PDB id from RCSB in mmCIF format, used
@@ -315,13 +308,13 @@ $('#opacity-slider').on('input', function() {
 
 viewer = pv.Viewer(document.getElementById('viewer'), {
     width : 'auto', height: 'auto', antialias : true, fog : true,
-    outline : true, quality : 'high', style : 'phong',
+    outline : true, quality : 'high',
     selectionColor : 'white',
     background : '#ccc', animateTime: 500, doubleClick : null
 });
 window.viewer = viewer;
 
-viewer.addListener('viewerReady', trajectory);
+viewer.addListener('viewerReady', transferase);
 
 viewer.on('doubleClick', function(picked) {
   console.log(picked.connectivity());

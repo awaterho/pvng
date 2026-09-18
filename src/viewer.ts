@@ -239,6 +239,32 @@ function optValue<T>(opts: Record<string, unknown>, name: string, defaultValue: 
   return defaultValue;
 }
 
+// number of samples in the SSAO hemisphere kernel -- kept in sync with the
+// `vec3 ssaoKernel[16]` array size hardcoded in shaders.ts's SSAO_FS.
+const SSAO_KERNEL_SIZE = 16;
+
+// deterministically generates the SSAO hemisphere sample kernel: a
+// cosine-weighted hemisphere over the golden angle, with samples pulled
+// toward the origin so nearby occluders are sampled more densely than
+// distant ones. Deliberately does not use Math.random() -- this project has
+// cross-platform Playwright screenshot baselines, and SSAO output needs to
+// stay bit-reproducible across runs on a given GPU.
+function makeSsaoKernel(): Float32Array {
+  const kernel = new Float32Array(SSAO_KERNEL_SIZE * 3);
+  const goldenAngle = 2.399963229728653;
+  for (let i = 0; i < SSAO_KERNEL_SIZE; ++i) {
+    const u = (i + 0.5) / SSAO_KERNEL_SIZE;
+    const phi = i * goldenAngle;
+    const r = Math.sqrt(u);
+    const z = Math.sqrt(1 - u);
+    const scale = 0.3 + 0.7 * Math.pow(i / SSAO_KERNEL_SIZE, 2);
+    kernel[i * 3 + 0] = r * Math.cos(phi) * scale;
+    kernel[i * 3 + 1] = r * Math.sin(phi) * scale;
+    kernel[i * 3 + 2] = z * scale;
+  }
+  return kernel;
+}
+
 
 function getDoubleClickHandler(opts: Record<string, unknown>): ClickHandler {
   if (opts.atomDoubleClick) {
@@ -287,6 +313,9 @@ interface ResolvedViewerOptions {
   outline: boolean;
   outlineColor: RGBA;
   outlineWidth: number;
+  ssao: boolean;
+  ssaoRadius: number;
+  ssaoIntensity: number;
   selectionColor: RGBA;
   fov: number;
   doubleClick: ClickHandler;
@@ -323,9 +352,28 @@ class Viewer {
   private _pickBuffer!: FrameBuffer;
   private _sceneBuffers!: SceneBuffers;
   private _compositeShader!: ShaderProgram;
-  private _compositeUniforms!: { opaqueColor: WebGLUniformLocation | null; accumTex: WebGLUniformLocation | null; revealTex: WebGLUniformLocation | null };
+  private _compositeUniforms!: {
+    opaqueColor: WebGLUniformLocation | null; accumTex: WebGLUniformLocation | null;
+    revealTex: WebGLUniformLocation | null; ssaoTex: WebGLUniformLocation | null;
+    ssaoEnabled: WebGLUniformLocation | null;
+  };
   private _blitShader!: ShaderProgram;
-  private _blitUniforms!: { opaqueColor: WebGLUniformLocation | null };
+  private _blitUniforms!: {
+    opaqueColor: WebGLUniformLocation | null; ssaoTex: WebGLUniformLocation | null;
+    ssaoEnabled: WebGLUniformLocation | null;
+  };
+  private _ssaoShader!: ShaderProgram;
+  private _ssaoUniforms!: {
+    depthTex: WebGLUniformLocation | null; projectionMat: WebGLUniformLocation | null;
+    invProjectionMat: WebGLUniformLocation | null; ssaoKernel: WebGLUniformLocation | null;
+    ssaoRadius: WebGLUniformLocation | null; ssaoIntensity: WebGLUniformLocation | null;
+    ssaoBias: WebGLUniformLocation | null; invResolution: WebGLUniformLocation | null;
+  };
+  private _ssaoBlurShader!: ShaderProgram;
+  private _ssaoBlurUniforms!: {
+    ssaoTex: WebGLUniformLocation | null; depthTex: WebGLUniformLocation | null;
+    invResolution: WebGLUniformLocation | null; nearFar: WebGLUniformLocation | null;
+  };
   private _drawBuffersIndexedExt: DrawBuffersIndexedExt | null = null;
   private _2dcontext!: CanvasRenderingContext2D;
   private _float32Allocator!: PoolAllocator<Float32Array>;
@@ -401,6 +449,9 @@ class Viewer {
       outline : optValue(opts, 'outline', true),
       outlineColor : color.forceRGB(optValue(opts, 'outlineColor', 'black')),
       outlineWidth: optValue(opts, 'outlineWidth', 1.5),
+      ssao : optValue(opts, 'ssao', false),
+      ssaoRadius : optValue(opts, 'ssaoRadius', 2.0),
+      ssaoIntensity : optValue(opts, 'ssaoIntensity', 1.0),
       selectionColor : color.forceRGB(optValue<string | RGBA>(opts, 'selectionColor', '#3f3'),
                                       0.7),
       fov : optValue(opts, 'fov', 45.0),
@@ -473,6 +524,8 @@ class Viewer {
             .setOutlineColorColor(color.forceRGB(value as string | RGBA));
       } else if (optName === 'outlineWidth') {
         this._cam.setOutlineWidth((value as number) + 0.0 /* force to float*/);
+      } else if (optName === 'ssao' || optName === 'ssaoRadius' || optName === 'ssaoIntensity') {
+        this.requestRedraw();
       }
     }
     return this._options[optName];
@@ -542,8 +595,6 @@ class Viewer {
     this._shaderCatalog = {
       hemilight : c.initShader(shaders.HEMILIGHT_VS,
                                shaders.PRELUDE_FS + shaders.HEMILIGHT_FS, p),
-      phong : c.initShader(shaders.HEMILIGHT_VS,
-                           shaders.PRELUDE_FS + shaders.PHONG_FS, p),
       outline : c.initShader(shaders.OUTLINE_VS,
                              shaders.PRELUDE_FS + shaders.OUTLINE_FS, p),
       lines : c.initShader(shaders.LINES_VS,
@@ -565,16 +616,17 @@ class Viewer {
 
     this._sceneBuffers = new SceneBuffers(c.gl(), {
       width : c.viewportWidth(), height : c.viewportHeight(),
+      ssaoDownscale : c.superSamplingFactor(),
     });
     this._blitShader = c.initShader(shaders.OIT_COMPOSITE_VS, shaders.OIT_BLIT_FS, p)!;
     this._blitUniforms = {
       opaqueColor : c.gl().getUniformLocation(this._blitShader, 'opaqueColor'),
+      ssaoTex : c.gl().getUniformLocation(this._blitShader, 'ssaoTex'),
+      ssaoEnabled : c.gl().getUniformLocation(this._blitShader, 'ssaoEnabled'),
     };
     if (this._sceneBuffers.oitSupported()) {
       this._shaderCatalog.hemilightTransparent =
         c.initShader(shaders.OIT_ACCUM_VS, shaders.OIT_ACCUM_HEMILIGHT_FS, p);
-      this._shaderCatalog.phongTransparent =
-        c.initShader(shaders.OIT_ACCUM_VS, shaders.OIT_ACCUM_PHONG_FS, p);
       if (hasFragDepth) {
         this._shaderCatalog.spheresTransparent =
           c.initShader(shaders.OIT_ACCUM_SPHERES_VS, shaders.OIT_ACCUM_SPHERES_FS, p);
@@ -589,6 +641,8 @@ class Viewer {
         opaqueColor : gl2.getUniformLocation(this._compositeShader, 'opaqueColor'),
         accumTex : gl2.getUniformLocation(this._compositeShader, 'accumTex'),
         revealTex : gl2.getUniformLocation(this._compositeShader, 'revealTex'),
+        ssaoTex : gl2.getUniformLocation(this._compositeShader, 'ssaoTex'),
+        ssaoEnabled : gl2.getUniformLocation(this._compositeShader, 'ssaoEnabled'),
       };
       // per-drawbuffer blend state: the accumulation target needs additive
       // blending while the revealage target needs multiplicative blending,
@@ -600,6 +654,37 @@ class Viewer {
       }
     }
     this._cam.setOpaqueOnly(this._sceneBuffers.oitSupported());
+
+    // SSAO's own two fullscreen passes -- independent of OIT support, since
+    // both read only the (always-present) opaque depth texture. See
+    // Viewer._renderSsao().
+    this._ssaoShader = c.initShader(shaders.OIT_COMPOSITE_VS, shaders.SSAO_FS, p)!;
+    {
+      const gl2 = c.gl();
+      this._ssaoUniforms = {
+        depthTex : gl2.getUniformLocation(this._ssaoShader, 'depthTex'),
+        projectionMat : gl2.getUniformLocation(this._ssaoShader, 'projectionMat'),
+        invProjectionMat : gl2.getUniformLocation(this._ssaoShader, 'invProjectionMat'),
+        ssaoKernel : gl2.getUniformLocation(this._ssaoShader, 'ssaoKernel[0]'),
+        ssaoRadius : gl2.getUniformLocation(this._ssaoShader, 'ssaoRadius'),
+        ssaoIntensity : gl2.getUniformLocation(this._ssaoShader, 'ssaoIntensity'),
+        ssaoBias : gl2.getUniformLocation(this._ssaoShader, 'ssaoBias'),
+        invResolution : gl2.getUniformLocation(this._ssaoShader, 'invResolution'),
+      };
+      gl2.useProgram(this._ssaoShader);
+      gl2.uniform3fv(this._ssaoUniforms.ssaoKernel, makeSsaoKernel());
+      this._cam.invalidateCurrentShader();
+    }
+    this._ssaoBlurShader = c.initShader(shaders.OIT_COMPOSITE_VS, shaders.SSAO_BLUR_FS, p)!;
+    {
+      const gl2 = c.gl();
+      this._ssaoBlurUniforms = {
+        ssaoTex : gl2.getUniformLocation(this._ssaoBlurShader, 'ssaoTex'),
+        depthTex : gl2.getUniformLocation(this._ssaoBlurShader, 'depthTex'),
+        invResolution : gl2.getUniformLocation(this._ssaoBlurShader, 'invResolution'),
+        nearFar : gl2.getUniformLocation(this._ssaoBlurShader, 'nearFar'),
+      };
+    }
     this._boundDraw = utils.bind(this, this._draw) as () => void;
     this._touchHandler = new TouchHandler(this._canvas!.domElement(),
                                           this, this._cam);
@@ -814,11 +899,68 @@ class Viewer {
     this._drawWithPass('normal');
     gl.disable(gl.BLEND);
 
+    const ssao = this._options.ssao && this._sceneBuffers.ssaoSupported();
+    if (ssao) {
+      this._renderSsao(gl);
+    }
+
     if (oit) {
       this._drawTransparent(gl);
     }
 
-    this._compositeToCanvas(gl, oit);
+    this._compositeToCanvas(gl, oit, ssao);
+  }
+
+  // SSAO: two fullscreen passes reading the opaque pass's depth texture
+  // (view-space position/normal are reconstructed from it -- see
+  // shaders.ts's SSAO_FS for why there's no separate normal G-buffer),
+  // writing a raw occlusion factor and then a depth-aware blurred version
+  // of it, consumed by _compositeToCanvas(). Runs right after the opaque
+  // pass (whose depth texture must be complete) and before the transparent
+  // pass (which rebinds its own target immediately after).
+  private _renderSsao(gl: WebGL2RenderingContext): void {
+    // the fullscreen triangle is front-facing and CULL_FACE is still
+    // cullFace(FRONT) from the opaque pass -- same trap as
+    // _compositeToCanvas() below, disable it or the triangle vanishes.
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.disable(gl.BLEND);
+
+    this._sceneBuffers.bindSsao();
+    gl.useProgram(this._ssaoShader);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.depthTexture());
+    gl.uniform1i(this._ssaoUniforms.depthTex, 0);
+    gl.uniformMatrix4fv(this._ssaoUniforms.projectionMat, false, this._cam.projection());
+    gl.uniformMatrix4fv(this._ssaoUniforms.invProjectionMat, false, this._cam.inverseProjection());
+    gl.uniform1f(this._ssaoUniforms.ssaoRadius, this._options.ssaoRadius);
+    gl.uniform1f(this._ssaoUniforms.ssaoIntensity, this._options.ssaoIntensity);
+    gl.uniform1f(this._ssaoUniforms.ssaoBias, 0.05);
+    gl.uniform2f(this._ssaoUniforms.invResolution,
+                1.0 / this._sceneBuffers.ssaoWidth(), 1.0 / this._sceneBuffers.ssaoHeight());
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    this._sceneBuffers.bindSsaoBlur();
+    gl.useProgram(this._ssaoBlurShader);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.ssaoTexture());
+    gl.uniform1i(this._ssaoBlurUniforms.ssaoTex, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.depthTexture());
+    gl.uniform1i(this._ssaoBlurUniforms.depthTex, 1);
+    gl.uniform2f(this._ssaoBlurUniforms.invResolution,
+                1.0 / this._sceneBuffers.ssaoWidth(), 1.0 / this._sceneBuffers.ssaoHeight());
+    gl.uniform2f(this._ssaoBlurUniforms.nearFar, this._cam.nearOffset(), this._cam.farOffset());
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    // mandatory: both passes above called gl.useProgram() behind Cam's
+    // back, and unlike _compositeToCanvas() (the last thing drawn each
+    // frame), real geometry (the transparent pass) still follows this --
+    // without invalidating, Cam.bind() could skip its own useProgram call
+    // and that geometry would silently render with the SSAO blur shader.
+    this._cam.invalidateCurrentShader();
   }
 
   // transparent pass: renders only translucent fragments (every
@@ -841,9 +983,10 @@ class Viewer {
     gl.depthMask(true);
   }
 
-  // composites the (optional) transparent accumulation onto the opaque
-  // target and presents the result on the visible canvas.
-  private _compositeToCanvas(gl: WebGL2RenderingContext, oit: boolean): void {
+  // composites the (optional) transparent accumulation and the (optional)
+  // SSAO occlusion factor onto the opaque target and presents the result
+  // on the visible canvas.
+  private _compositeToCanvas(gl: WebGL2RenderingContext, oit: boolean, ssao: boolean): void {
     const width = this._canvas!.viewportWidth();
     const height = this._canvas!.viewportHeight();
     if (!oit) {
@@ -856,6 +999,10 @@ class Viewer {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.opaqueColorTexture());
       gl.uniform1i(this._blitUniforms.opaqueColor, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.ssaoBlurTexture());
+      gl.uniform1i(this._blitUniforms.ssaoTex, 1);
+      gl.uniform1i(this._blitUniforms.ssaoEnabled, ssao ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
@@ -880,6 +1027,10 @@ class Viewer {
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.revealTexture());
     gl.uniform1i(this._compositeUniforms.revealTex, 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.ssaoBlurTexture());
+    gl.uniform1i(this._compositeUniforms.ssaoTex, 3);
+    gl.uniform1i(this._compositeUniforms.ssaoEnabled, ssao ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);

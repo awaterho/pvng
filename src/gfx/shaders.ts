@@ -27,7 +27,6 @@ export interface ShaderSources {
   SELECT_FS: string;
   LINES_VS: string;
   HEMILIGHT_FS: string;
-  PHONG_FS: string;
   HEMILIGHT_VS: string;
   OUTLINE_FS: string;
   OUTLINE_VS: string;
@@ -39,7 +38,6 @@ export interface ShaderSources {
   SELECT_SPHERES_VS: string;
   OIT_ACCUM_VS: string;
   OIT_ACCUM_HEMILIGHT_FS: string;
-  OIT_ACCUM_PHONG_FS: string;
   OIT_ACCUM_LINES_VS: string;
   OIT_ACCUM_LINES_FS: string;
   OIT_ACCUM_SPHERES_VS: string;
@@ -47,6 +45,8 @@ export interface ShaderSources {
   OIT_COMPOSITE_VS: string;
   OIT_COMPOSITE_FS: string;
   OIT_BLIT_FS: string;
+  SSAO_FS: string;
+  SSAO_BLUR_FS: string;
 }
 
 const shaders: ShaderSources = {
@@ -220,27 +220,6 @@ void main(void) {\n\
   float hemi = min(1.0, max(0.0, dp)*0.6+0.5);\n\
   gl_FragColor = vec4(vertColor.rgb*hemi, vertColor.a);\n\
   gl_FragColor.rgb = handleFog(handleSelect(gl_FragColor.rgb, vertSelect));\n\
-  gl_FragColor = handleAlpha(gl_FragColor);\n\
-}',
-// phong fragment shader
-PHONG_FS : '\n\
-varying vec4 vertColor;\n\
-varying vec3 vertNormal;\n\
-varying vec3 vertPos;\n\
-uniform float zoom;\n\
-varying float vertSelect;\n\
-\n\
-void main(void) {\n\
-  vec3 eyePos = vec3(0.0, 0.0, zoom);\n\
-  float dp = dot(vertNormal, normalize(eyePos - vertPos));\n\
-  float hemi = min(1.0, max(0.3, dp)+0.2);\n\
-  //hemi *= vertColor.a;\n\
-  vec3 rgbColor = vertColor.rgb * hemi; \n\
-  //gl_FragDepthEXT = gl_FragCoord.z;\n\
-  rgbColor += min(vertColor.rgb, 0.8) * pow(max(0.0, dp), 18.0);\n\
-  rgbColor = handleSelect(rgbColor, vertSelect);\n\
-  gl_FragColor = vec4(clamp(rgbColor, 0.0, 1.0), vertColor.a);\n\
-  gl_FragColor.rgb = handleFog(gl_FragColor.rgb);\n\
   gl_FragColor = handleAlpha(gl_FragColor);\n\
 }',
 
@@ -486,7 +465,7 @@ void main() {\n\
 // are written in ES 3.00.
 //
 // The accumulation shaders below are the ES 3.00 counterparts of
-// HEMILIGHT_FS/PHONG_FS/LINES_FS: same lighting math, but instead of
+// HEMILIGHT_FS/LINES_FS: same lighting math, but instead of
 // writing a single blended gl_FragColor, they discard fully-opaque and
 // fully-transparent fragments and write a weighted premultiplied
 // contribution to two targets (accumulation, revealage) that get composited
@@ -552,54 +531,6 @@ void main(void) {\n\
   if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
   float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
   color.rgb = handleFog(handleSelect(color.rgb, vertSelect), depth);\n\
-  float w = oitWeight(depth, color.a);\n\
-  accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
-  revealOut = vec4(color.a);\n\
-}',
-
-OIT_ACCUM_PHONG_FS : '#version 300 es\n\
-precision ${PRECISION} float;\n\
-\n\
-in vec4 vertColor;\n\
-in vec3 vertNormal;\n\
-in vec3 vertPos;\n\
-in float vertSelect;\n\
-uniform float zoom;\n\
-\n\
-uniform vec4 selectionColor;\n\
-uniform bool fog;\n\
-uniform float fogNear;\n\
-uniform float fogFar;\n\
-uniform vec3 fogColor;\n\
-\n\
-layout(location = 0) out vec4 accumOut;\n\
-layout(location = 1) out vec4 revealOut;\n\
-\n\
-vec3 handleSelect(vec3 inColor, float sel) {\n\
-  return mix(inColor, selectionColor.rgb, step(0.5, sel) * selectionColor.a);\n\
-}\n\
-vec3 handleFog(vec3 inColor, float depth) {\n\
-  if (fog) {\n\
-    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
-    return mix(inColor, fogColor, fogFactor);\n\
-  }\n\
-  return inColor;\n\
-}\n\
-float oitWeight(float z, float a) {\n\
-  return a * clamp(0.03 / (1e-5 + pow(z / 200.0, 4.0)), 1e-2, 3e3);\n\
-}\n\
-\n\
-void main(void) {\n\
-  vec3 eyePos = vec3(0.0, 0.0, zoom);\n\
-  float dp = dot(vertNormal, normalize(eyePos - vertPos));\n\
-  float hemi = min(1.0, max(0.3, dp)+0.2);\n\
-  vec3 rgbColor = vertColor.rgb * hemi;\n\
-  rgbColor += min(vertColor.rgb, 0.8) * pow(max(0.0, dp), 18.0);\n\
-  rgbColor = handleSelect(rgbColor, vertSelect);\n\
-  vec4 color = vec4(clamp(rgbColor, 0.0, 1.0), vertColor.a);\n\
-  if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
-  float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
-  color.rgb = handleFog(color.rgb, depth);\n\
   float w = oitWeight(depth, color.a);\n\
   accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
   revealOut = vec4(color.a);\n\
@@ -753,6 +684,8 @@ void main(void) {\n\
 // fullscreen-triangle composite pass: blends the accumulation/revealage
 // targets over the opaque scene. No vertex buffer needed -- the triangle is
 // generated directly from gl_VertexID and oversized to cover the viewport.
+// Also reused, unchanged, as the vertex stage for SSAO_FS/SSAO_BLUR_FS below
+// -- every fullscreen pass in this file shares this one vertex shader.
 OIT_COMPOSITE_VS : '#version 300 es\n\
 out vec2 vertUv;\n\
 void main(void) {\n\
@@ -767,11 +700,16 @@ in vec2 vertUv;\n\
 uniform sampler2D opaqueColor;\n\
 uniform sampler2D accumTex;\n\
 uniform sampler2D revealTex;\n\
+uniform sampler2D ssaoTex;\n\
+uniform bool ssaoEnabled;\n\
 out vec4 fragColor;\n\
 void main(void) {\n\
   vec4 accum = texture(accumTex, vertUv);\n\
   float reveal = texture(revealTex, vertUv).a;\n\
   vec3 opaque = texture(opaqueColor, vertUv).rgb;\n\
+  if (ssaoEnabled) {\n\
+    opaque *= texture(ssaoTex, vertUv).r;\n\
+  }\n\
   vec3 averageColor = accum.rgb / max(accum.a, 1e-5);\n\
   vec3 finalColor = averageColor * (1.0 - reveal) + opaque * reveal;\n\
   fragColor = vec4(finalColor, 1.0);\n\
@@ -787,9 +725,129 @@ OIT_BLIT_FS : '#version 300 es\n\
 precision ${PRECISION} float;\n\
 in vec2 vertUv;\n\
 uniform sampler2D opaqueColor;\n\
+uniform sampler2D ssaoTex;\n\
+uniform bool ssaoEnabled;\n\
 out vec4 fragColor;\n\
 void main(void) {\n\
-  fragColor = vec4(texture(opaqueColor, vertUv).rgb, 1.0);\n\
+  vec3 opaque = texture(opaqueColor, vertUv).rgb;\n\
+  if (ssaoEnabled) {\n\
+    opaque *= texture(ssaoTex, vertUv).r;\n\
+  }\n\
+  fragColor = vec4(opaque, 1.0);\n\
+}',
+
+// screen-space ambient occlusion. Reconstructs view-space position/normal
+// from the opaque pass's depth texture (no separate normal G-buffer -- see
+// the SSAO plan in the project's implementation notes for why), samples a
+// hemisphere kernel around each fragment's normal, and writes an occlusion
+// factor (1.0 = fully lit, darker = more occluded) to a single-channel
+// target. Reuses OIT_COMPOSITE_VS's fullscreen-triangle trick.
+SSAO_FS : '#version 300 es\n\
+precision highp float;\n\
+in vec2 vertUv;\n\
+uniform sampler2D depthTex;\n\
+uniform mat4 projectionMat;\n\
+uniform mat4 invProjectionMat;\n\
+uniform vec3 ssaoKernel[16];\n\
+uniform float ssaoRadius;\n\
+uniform float ssaoIntensity;\n\
+uniform float ssaoBias;\n\
+uniform vec2 invResolution;\n\
+out vec4 fragAo;\n\
+\n\
+vec3 viewPosFromUv(vec2 uv, float depth) {\n\
+  vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);\n\
+  vec4 view = invProjectionMat * clip;\n\
+  return view.xyz / view.w;\n\
+}\n\
+\n\
+void main(void) {\n\
+  float centerDepth = texture(depthTex, vertUv).r;\n\
+  if (centerDepth >= 1.0) {\n\
+    fragAo = vec4(1.0);\n\
+    return;\n\
+  }\n\
+  vec3 P = viewPosFromUv(vertUv, centerDepth);\n\
+\n\
+  // 4-tap, silhouette-aware normal reconstruction: for each axis, pick\n\
+  // whichever neighbor is closer in depth to the center before taking the\n\
+  // difference, so the derived normal stays correct at depth\n\
+  // discontinuities instead of blending across them.\n\
+  vec3 pr = viewPosFromUv(vertUv + vec2(invResolution.x, 0.0),\n\
+                          texture(depthTex, vertUv + vec2(invResolution.x, 0.0)).r);\n\
+  vec3 pl = viewPosFromUv(vertUv - vec2(invResolution.x, 0.0),\n\
+                          texture(depthTex, vertUv - vec2(invResolution.x, 0.0)).r);\n\
+  vec3 pu = viewPosFromUv(vertUv + vec2(0.0, invResolution.y),\n\
+                          texture(depthTex, vertUv + vec2(0.0, invResolution.y)).r);\n\
+  vec3 pd = viewPosFromUv(vertUv - vec2(0.0, invResolution.y),\n\
+                          texture(depthTex, vertUv - vec2(0.0, invResolution.y)).r);\n\
+  vec3 dx = (abs(pr.z - P.z) < abs(P.z - pl.z)) ? (pr - P) : (P - pl);\n\
+  vec3 dy = (abs(pu.z - P.z) < abs(P.z - pd.z)) ? (pu - P) : (P - pd);\n\
+  vec3 N = normalize(cross(dx, dy));\n\
+\n\
+  // rotate the kernel by a hash of a 4x4 screen tile (not the raw pixel) --\n\
+  // this yields exactly 16 distinct rotations tiled across the screen, so\n\
+  // the 4x4 box blur in SSAO_BLUR_FS averages exactly over the full\n\
+  // rotation set, without needing a separate noise texture.\n\
+  vec2 tile = mod(floor(gl_FragCoord.xy), 4.0);\n\
+  float angle = fract(sin(dot(tile, vec2(12.9898, 78.233))) * 43758.5453) *\n\
+               6.28318530718;\n\
+  vec3 randomVec = vec3(cos(angle), sin(angle), 0.0);\n\
+  vec3 T = normalize(randomVec - N * dot(randomVec, N));\n\
+  vec3 B = cross(N, T);\n\
+  mat3 TBN = mat3(T, B, N);\n\
+\n\
+  float occlusion = 0.0;\n\
+  for (int i = 0; i < 16; ++i) {\n\
+    vec3 samplePos = P + (TBN * ssaoKernel[i]) * ssaoRadius;\n\
+    vec4 offset = projectionMat * vec4(samplePos, 1.0);\n\
+    offset.xyz /= offset.w;\n\
+    vec2 sampleUv = offset.xy * 0.5 + 0.5;\n\
+    float sampleDepth = texture(depthTex, sampleUv).r;\n\
+    float sceneZ = viewPosFromUv(sampleUv, sampleDepth).z;\n\
+    float occluded = step(samplePos.z + ssaoBias, sceneZ);\n\
+    float rangeCheck = smoothstep(0.0, 1.0,\n\
+                                  ssaoRadius / max(1e-5, abs(P.z - sceneZ)));\n\
+    occlusion += occluded * rangeCheck;\n\
+  }\n\
+  float ao = clamp(1.0 - ssaoIntensity * (occlusion / 16.0), 0.0, 1.0);\n\
+  fragAo = vec4(ao);\n\
+}',
+
+// depth-aware 4x4 box blur of the raw SSAO buffer -- taps are rejected when\n\
+// their linear depth differs too much from the center (relative to the\n\
+// center's own distance), which keeps AO from bleeding across silhouettes\n\
+// onto whatever is behind them.\n\
+SSAO_BLUR_FS : '#version 300 es\n\
+precision highp float;\n\
+in vec2 vertUv;\n\
+uniform sampler2D ssaoTex;\n\
+uniform sampler2D depthTex;\n\
+uniform vec2 invResolution;\n\
+uniform vec2 nearFar;\n\
+out vec4 fragAo;\n\
+\n\
+float linearDepth(float d) {\n\
+  float near = nearFar.x;\n\
+  float far = nearFar.y;\n\
+  return (2.0 * near * far) / (far + near - (d * 2.0 - 1.0) * (far - near));\n\
+}\n\
+\n\
+void main(void) {\n\
+  float centerLinZ = linearDepth(texture(depthTex, vertUv).r);\n\
+  float sum = 0.0;\n\
+  float count = 0.0;\n\
+  for (int x = -2; x <= 1; ++x) {\n\
+    for (int y = -2; y <= 1; ++y) {\n\
+      vec2 uv = vertUv + vec2(float(x), float(y)) * invResolution;\n\
+      float linZ = linearDepth(texture(depthTex, uv).r);\n\
+      if (abs(linZ - centerLinZ) < 0.02 * centerLinZ) {\n\
+        sum += texture(ssaoTex, uv).r;\n\
+        count += 1.0;\n\
+      }\n\
+    }\n\
+  }\n\
+  fragAo = vec4(count > 0.0 ? sum / count : 1.0);\n\
 }'
 
 };

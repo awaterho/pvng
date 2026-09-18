@@ -103,6 +103,8 @@ class Cam {
   private _outlineWidth: number;
   private _outlineEnabled: boolean;
   private _opaqueOnly: boolean;
+  private _invProjection: mat4;
+  private _invProjectionDirty: boolean;
   private _selectionColor: vec4;
   private _center: vec3;
   private _zoom: number;
@@ -134,6 +136,8 @@ class Cam {
     this._outlineWidth = 1.0;
     this._outlineEnabled = true;
     this._opaqueOnly = false;
+    this._invProjection = mat4.create();
+    this._invProjectionDirty = true;
     this._selectionColor = vec4.fromValues(0.1, 1.0, 0.1, 0.7);
     this._center = vec3.create();
     this._zoom = 50;
@@ -259,6 +263,7 @@ class Cam {
       mat4.identity(this._projection);
       mat4.perspective(this._projection, this._fovY, this._width / this._height,
                        this._near, this._far);
+      this._invProjectionDirty = true;
       updated = true;
     }
     this._updateProjectionMat = false;
@@ -267,6 +272,27 @@ class Cam {
       this._incrementStateId();
     }
     return updated;
+  }
+
+  // the current projection matrix -- forces a pending rebuild first, since
+  // that normally only happens lazily inside bind(). Used by the SSAO pass,
+  // which runs outside the normal per-object draw loop and so never calls
+  // bind() itself.
+  projection(): mat4 {
+    this._updateIfRequired();
+    return this._projection;
+  }
+
+  // inverse of projection(), used by the SSAO pass to reconstruct
+  // view-space position from screen-space UV + depth. Cached and only
+  // recomputed when the projection matrix actually changes.
+  inverseProjection(): mat4 {
+    this._updateIfRequired();
+    if (this._invProjectionDirty) {
+      mat4.invert(this._invProjection, this._projection);
+      this._invProjectionDirty = false;
+    }
+    return this._invProjection;
   }
 
   setViewportSize(width: number, height: number): void {

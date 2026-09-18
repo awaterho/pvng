@@ -1,172 +1,102 @@
-pv - WebGL protein viewer
+pvng - WebGL2 protein viewer
 =========================================
 
-`pv`  is a WebGL-based protein viewer whose goal is to once-for-all end the reign of Java applets on websites that require visualisation of protein structures. It's not you Java, it's all the annoying security popups and slow loading times. `pv` implements all major render modes that you would expect, and supports custom color schemes. 
+`pvng` is a WebGL2-based protein viewer for the browser. It renders cartoons, ball-and-stick,
+line, trace, sphere and point representations directly from PDB or mmCIF files, with custom
+color schemes, selections, and proper order-independent transparency, all at interactive
+framerates even for large macromolecules.
 
-Because there is nothing worse than an unresponsive website, `pv` has been implemented with maximum performance in mind. Even very large macromolecules can be visualised at interactive framerates.
-
-Project Status
+Origins
 -----------------------------------------
 
-This project is no longer maintained. I simply don't have the time to work on it anymore. 
+`pvng` is a fork and continuation of [`pv`](https://github.com/biasmv/pv), the WebGL protein
+viewer originally created by [Marco Biasini](https://github.com/biasmv). The original project
+was archived as no longer maintained; `pvng` builds on that foundation and carries the work
+forward: the rendering engine, molecule model and file parsers are all still fundamentally
+Marco's design. Huge thanks to him, and to everyone who contributed to the original `pv`
+(`@Traksewt`, `@kozmad`, `@greenify`, `@andreasprlic`, and others credited in `pv`'s own
+history).
+
+Since forking, the project has been substantially modernized:
+
+  - migrated the WebGL context from WebGL1 to WebGL2
+  - full rewrite of the codebase from JavaScript to TypeScript
+  - replaced the AMD/RequireJS/Grunt build with [Vite](https://vitejs.dev), publishing ESM, CJS
+    and IIFE bundles with generated type declarations
+  - replaced the vendored `gl-matrix` copy with the upstream npm package
+  - replaced screen-door transparency with proper weighted blended order-independent
+    transparency (OIT), including for billboarded spheres
+  - added an mmCIF/CIF parser alongside the existing PDB parser
+  - migrated the test suite from QUnit to [Vitest](https://vitest.dev) (unit) and
+    [Playwright](https://playwright.dev) (browser/visual regression)
 
 Trying it out
 -----------------------------------------
 
-You can try the [online demo](http://biasmv.github.io/pv/demo.html) or run it locally on your computer.
-
-Clone this repository
+Clone this repository:
 
 ```bash
-git clone https://github.com/biasmv/pv.git
+git clone https://github.com/awaterho/pvng.git
+cd pvng
+npm install
 ```
 
-Change to the `pv` directory and serve the files using the serve script in the source directory. This will start a simple static-file server using Python's SimpleHTTPServer module.
+Then start the Vite dev server:
 
 ```bash
-cd pv
-./serve 
+npm run dev
 ```
 
-Open a WebGL-enabled web browser and visit http://localhost:8000
+This opens `dev.html`, which loads the viewer directly from TypeScript source. `demo.html`
+exercises the built `dist/` bundle instead and is a closer approximation of how a consuming
+website would use the library.
 
-Want to use PV on your website?
+Using pvng on your website
 ----------------------------------------
 
-I would love you to! Most features you would expect from a protein viewer are already present and working. One considerations is important though:
+`pvng` isn't published to npm yet (`bio-pv` on the registry is still the original, unmaintained
+`pv` package, not this fork). In the meantime, build it yourself and copy the bundle into your
+site:
 
- * WebGL is only supported in a subset of browsers. If you can afford to lose users of IE and older versions of browsers, `pv` is a good solution for protein visualisation.
+```bash
+git clone https://github.com/awaterho/pvng.git
+cd pvng
+npm install
+npm run build
+```
 
-Citing PV?
+This produces `dist/pv.iife.js`, which defines a global `pv` and can be dropped straight into a
+page with a plain `<script>` tag (`dist/pv.js` and `dist/pv.cjs` are also available if you're
+using a bundler or `require`):
+
+```
+<div id="viewer" style="width: 100%; height: 100%;"></div>
+<script src="pv.iife.js"></script>
+<script>
+  var viewer = pv.Viewer(document.getElementById('viewer'), {
+    width: 'auto',
+    height: 'auto',
+    antialias: true,
+    quality: 'high',
+  });
+
+  pv.io.fetchCif('https://files.rcsb.org/download/1HBB.cif', function (structure) {
+    viewer.cartoon('protein', structure, { color: pv.color.ssSuccession() });
+    viewer.autoZoom();
+  });
+</script>
+```
+
+WebGL2 is required, so pvng won't run in browsers without WebGL2 support.
+
+Development
 ----------------------------------------
 
-I'm planning on writing a small application note, but in the mean time, use the following DOI for citing PV in your work.
-
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.20980.svg)](http://dx.doi.org/10.5281/zenodo.20980)
-
-
-
-Contributing
------------------------------------------
-
-Contributions of any kind (bugfixes, documentation, new features, etc.) are more than welcome. Just file bugs or open a pull request. Before submitting pull requests, please make sure to follow these [guide-lines](http://pv.readthedocs.io/en/v1.8.1/developer.html).
-
-
-Acknowledgements
-----------------------------------------
-
-PV uses the amazing [gl-matrix](https://github.com/toji/gl-matrix) JavaScript library for matrix and vector operations.
-
-
-Thanks to @Traksewt, @kozmad, @greenify for their contributions
-
-Documentation
----------------------------------------
-
-Documentation for `pv` is available [here](http://pv.readthedocs.org). 
-
-Changelog
-----------------------------------------
-
-# New since latest release
-
-- Added experimental viewpointChanged event to viewer that allows to synchronize the orientation of two viewers.
-- Inverted color of rainbow gradient.
-- Add missing prop implementation for atom view.
-- Add very basic extension/plugin mechanism.
-- Getters for getting rotation/center.
-- Add a billboard-based sphere shader. This improves rendering speed when rendering whole structures using spheres. They also look much smoother.
-- Objects with an opacity of 0 can no longer be picked.
-- Support pan by middle-click.
-
-# New in Version 1.8.1
-
-- A few additional improvements to outline rendering quality
-- Made a few tweaks to documentation
-
-# New in Version 1.8.0
-
-- Implement screen-door transparency as an alternative to alpha-based transparency. To enable screen-door transparency, pass transparency : 'screendoor' when constructing the viewer.
-- Added special selection highlighting render mode.
-- Improve handling of click event by only firing click events when the mouse button is pressed/released within a short timespan.
-- Improve rendering of outline by properly scaling the extrusion factor based on the size of the GL canvas.
-- Added more sample code to documentation
-
-# New in Version 1.7.2
-
-- Made a few changes to the samples contained in the docs that don't work for some people. There is no functionality change on the code-level, that's why there is no 1.7.2 release.
-
-# New in Version 1.7.1
-
-- Added bower.json to release package so people can install PV using bower. This only works for release packages, but not the git repository itself.
-
-### New in Version 1.7.0
-
-- PDB import: Improved code to guess element from atom name. This fixes issues in correctly detecting hydrogen atoms for some cases.
-- Add support for click events on custom meshes
-- Deprecated atomDoubleClick/atomClick events in favor of click/doubleClicked to make it clearer that the target of the click event might be objects other than atoms. 
-- Simplified the picking results object. The picking results now provides the position of the clicked object as the ```pos()``` property. It is no longer required to transform the atom position by the symmetry transformation matrix when displaying biological units.
-- Support for loading multi-model pdb files.
-- Added functionality to superpose two structures using least-square fitting
-
-### New in Version 1.6.0
-
-- Added option to set field of view (FOV)
-- Added "points" rendering mode in which every atom is rendered as a point. This is useful for rendering point clouds.
-- Get BioJS snippets working again (@greenify)
-
-### New in Version 1.5.0
-
-- Added Viewer.spin command to spin the camera around an axis
-- Relax some limits on number of elements that could be rendered at full connectivity level. Now it would theoretically be possible to render 2^24 atoms, even though the amount of geometry is likely to take down the browser.
-- Fix rendering for very long RNA molecules that broke some assumptions in the cartoon rendering code (1J5E, for example see issue [#82](https://github.com/biasmv/pv/issues/82)).
-- Improve heuristics to determine whether two residues belong to the same trace by not introducing trace breaks in case the residues are connected by a bond. This allows users to manually set bonds in case they have other means of knowing that two residues are to part of the same trace ([#83](https://github.com/biasmv/pv/issues/83)).
-
-### New in Version 1.4.0
-
-- Basic support RNA/DNA rendering for all render modes
-- Multi-touch support for iOS and Android (with contributions by @kozmad, @lordvlad)
-- improved visual clarity of text labels
-- use correct line width when manual anti-aliasing is enabled.
-- text labels can now be styled (color, font-family, font-weight, size)
-- reduced file size of minified JavaScript file by a little more than 10%
-- ability to add geometric shapes to the 3D scene through customMesh
-- ability to specify custom color palettes (@andreasprlic)
-- viewerReady event (@andreasprlic)
-- PV can optionally be used as an AMD module without polluting the global namespace
-- added more unit and functional tests. The tests reach a coverage of 80% of the total number of exectuable lines of code.
-- support for loading small molecules from SDF files
-
-### New in Version 1.3.1
-
-- fix bug in strand smoothing which would cause residues at the beginning of the trace to get collapsed.
-- rendering: check for null slab object to allow drawing to work when no objects are visible.
-
-### New in Version 1.3
-
-- publish it as an npm module
-- PDB IO: parse insertion codes
-- add method to retrieve current color of atom. This is useful for highlighting purposes, where the color of certain atoms is temporarily changed and then reverted back to the original.
-- smoothing of strands when rendering as helix, strand, coil cartoon
-- implement proper strand "arrows"
-- improved auto-slabbing when the rendered objects are off-center
-
-### New in Version 1.2
-
-- add transparancy support to mesh and line geoms (@kozmad)
-- substantial speed improvements through implementation of buffer pool for typed arrays.
-- method to assign secondary structure based on carbon-alpha positions
-- improved documentation
-- improve dictionary selection
-- support for adding text labels to the 3D scene
-- autoZoom to fit structure into viewport
-- work around uint16 buffer limit of WebGL by automatically splitting the geometry of large molecules into multiple buffers
-- support for different color notations, e.g. hex, color names.
-- support for displaying molecular assemblies, including support for picking of symmetry-related copies
-- implement different slab-modes
-- rudimentary support for rendering MSMS surfaces in the browser. Requires conversion to binary format first.
-- adding customisable animation time (@Traksewt)
-- add customizable atom picking events (double and single click) (@Traksewt)
-- improved animation support (@Traksewt)
-- customizable background color (@Traksewt)
-
+```bash
+npm run dev         # start the Vite dev server (dev.html)
+npm run build        # produce dist/pv.{js,cjs,iife.js} + type declarations
+npm run typecheck    # tsc --noEmit
+npm run lint         # eslint .
+npm test             # unit tests (vitest)
+npm run test:browser # browser/visual-regression tests (playwright)
+```

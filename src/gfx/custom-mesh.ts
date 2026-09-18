@@ -48,11 +48,9 @@ interface Shader extends IVAShader, ShaderProgram {
 
 interface ShaderCatalog {
   hemilight: Shader;
-  phong: Shader;
   select: Shader;
   outline: Shader;
   hemilightTransparent?: Shader;
-  phongTransparent?: Shader;
   [pass: string]: Shader | undefined;
 }
 
@@ -285,20 +283,16 @@ utils.derive(CustomMesh, SceneNode, {
     va.draw();
     va.releaseAttribs(shader);
   },
+  // 'style' is currently always 'hemilight' (the only shading style pv
+  // supports), so this always resolves to the hemilight shader -- kept as a
+  // dispatcher (rather than inlined at call sites) since 'pass' still
+  // selects between several distinct shaders.
   shaderForStyleAndPass: function(this: CustomMesh, shaderCatalog: ShaderCatalog, style: unknown, pass: unknown) {
     if (pass === 'normal') {
-      if (style === 'hemilight') {
-        return shaderCatalog.hemilight;
-      } else {
-        return shaderCatalog.phong;
-      }
+      return shaderCatalog.hemilight;
     }
     if (pass === 'transparent') {
-      if (style === 'hemilight') {
-        return shaderCatalog.hemilightTransparent ?? null;
-      } else {
-        return shaderCatalog.phongTransparent ?? null;
-      }
+      return shaderCatalog.hemilightTransparent ?? null;
     }
     if (pass === 'select') {
       return shaderCatalog.select;

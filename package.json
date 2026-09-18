@@ -1,18 +1,18 @@
 {
-  "name": "bio-pv",
+  "name": "pvng",
   "version": "2.0.0-dev",
-  "description": "WebGL protein viewer",
+  "description": "WebGL2 protein viewer",
   "type": "module",
-  "homepage": "https://github.com/biasmv/pv",
+  "homepage": "https://github.com/awaterho/pvng",
   "author": {
-    "name": "Marco Biasini"
+    "name": "Andrew Waterhouse"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/biasmv/pv.git"
+    "url": "git://github.com/awaterho/pvng.git"
   },
   "bugs": {
-    "url": "https://github.com/biasmv/pv/issues"
+    "url": "https://github.com/awaterho/pvng/issues"
   },
   "license": "MIT",
   "exports": {
