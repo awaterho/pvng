@@ -20,6 +20,7 @@
 
 export interface ShaderSources {
   PRELUDE_FS: string;
+  PRELUDE_FS_ALWAYS_BLEND: string;
   LINES_FS: string;
   SELECT_LINES_FS: string;
   SELECT_LINES_VS: string;
@@ -37,6 +38,14 @@ export interface ShaderSources {
   SPHERES_VS: string;
   SELECT_SPHERES_FS: string;
   SELECT_SPHERES_VS: string;
+  OIT_ACCUM_VS: string;
+  OIT_ACCUM_HEMILIGHT_FS: string;
+  OIT_ACCUM_PHONG_FS: string;
+  OIT_ACCUM_LINES_VS: string;
+  OIT_ACCUM_LINES_FS: string;
+  OIT_COMPOSITE_VS: string;
+  OIT_COMPOSITE_FS: string;
+  OIT_BLIT_FS: string;
 }
 
 const shaders: ShaderSources = {
@@ -47,11 +56,54 @@ const shaders: ShaderSources = {
 // with mediump, but some android devices do not support highp.
 
 
-// this fragment shader prelude gets added to all fragment shader code 
-// before  compiling. It essentially contains a selection of functions 
-// required by  multiple fragment shaders, e.g. the code for screen-door-
-// transparency, selection highlighting etc.
+// this fragment shader prelude gets added to all fragment shader code
+// before  compiling. It essentially contains a selection of functions
+// required by  multiple fragment shaders, e.g. alpha/opaqueness handling,
+// selection highlighting etc.
 PRELUDE_FS : '\n\
+precision ${PRECISION} float;\n\
+uniform bool opaqueOnly;\n\
+vec4 handleAlpha(vec4 inColor) {\n\
+  if (opaqueOnly) {\n\
+    if (inColor.a < 0.999) { discard; }\n\
+    return inColor;\n\
+  }\n\
+  if (inColor.a == 0.0) { discard; }\n\
+  return inColor;\n\
+} \n\
+\n\
+int intMod(int x, int y) { \n\
+  int z = x/y;\n\
+  return x-y*z;\n\
+}\n\
+\n\
+uniform vec4 selectionColor;\n\
+\n\
+vec3 handleSelect(vec3 inColor, float vertSelect) { \n\
+  return mix(inColor, selectionColor.rgb, \n\
+             step(0.5, vertSelect) * selectionColor.a); \n\
+} \n\
+\n\
+uniform bool fog;\n\
+uniform float fogNear;\n\
+uniform float fogFar;\n\
+uniform vec3 fogColor;\n\
+vec3 handleFog(vec3 inColor) {\n\
+  if (fog) {\n\
+    float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
+    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
+    return mix(inColor, fogColor, fogFactor);\n\
+  } else {\n\
+    return inColor;\n\
+  }\n\
+}',
+
+// billboarded spheres don't (yet) have a weighted-blended-OIT accumulation
+// variant (see OIT_ACCUM_*_FS), so they're deliberately exempted from
+// PRELUDE_FS's opaqueOnly gate -- a translucent sphere renders via plain
+// (non-order-independent) alpha blending instead of silently disappearing
+// during the opaque pass. Identical to PRELUDE_FS otherwise.
+PRELUDE_FS_ALWAYS_BLEND : '\n\
 precision ${PRECISION} float;\n\
 vec4 handleAlpha(vec4 inColor) {\n\
   if (inColor.a == 0.0) { discard; }\n\
@@ -458,6 +510,226 @@ void main() {\n\
   vertCenter = modelviewMat* vec4(attrPos, 1.0);\n\
   radius = attrNormal.z;\n\
   objId = attrObjId;\n\
+}',
+
+// --- weighted blended order-independent transparency (OIT) shaders ---
+//
+// These are GLSL ES 3.00 (WebGL2-only): multiple render targets require
+// `out` variables with explicit layout locations, since `gl_FragData[]`
+// isn't available under WebGL2. Every other shader in this file stays
+// GLSL ES 1.00 (attribute/varying/gl_FragColor) -- a WebGL2 context still
+// compiles and runs that dialect unmodified for single-output rendering,
+// so only the shaders that need genuinely WebGL2-only features (MRT here)
+// are written in ES 3.00.
+//
+// The accumulation shaders below are the ES 3.00 counterparts of
+// HEMILIGHT_FS/PHONG_FS/LINES_FS: same lighting math, but instead of
+// writing a single blended gl_FragColor, they discard fully-opaque and
+// fully-transparent fragments and write a weighted premultiplied
+// contribution to two targets (accumulation, revealage) that get composited
+// over the opaque scene by OIT_COMPOSITE_FS. See Viewer._draw().
+OIT_ACCUM_VS : '#version 300 es\n\
+in vec3 attrPos;\n\
+in vec4 attrColor;\n\
+in vec3 attrNormal;\n\
+in float attrSelect;\n\
+\n\
+uniform mat4 projectionMat;\n\
+uniform mat4 modelviewMat;\n\
+out vec4 vertColor;\n\
+out vec3 vertNormal;\n\
+out vec3 vertPos;\n\
+out float vertSelect;\n\
+void main(void) {\n\
+  vertPos = (modelviewMat * vec4(attrPos, 1.0)).xyz;\n\
+  gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+  vec4 n = (modelviewMat * vec4(attrNormal, 0.0));\n\
+  vertNormal = n.xyz;\n\
+  vertColor = attrColor;\n\
+  vertSelect = attrSelect;\n\
+}',
+
+OIT_ACCUM_HEMILIGHT_FS : '#version 300 es\n\
+precision ${PRECISION} float;\n\
+\n\
+in vec4 vertColor;\n\
+in vec3 vertNormal;\n\
+in float vertSelect;\n\
+\n\
+uniform vec4 selectionColor;\n\
+uniform bool fog;\n\
+uniform float fogNear;\n\
+uniform float fogFar;\n\
+uniform vec3 fogColor;\n\
+\n\
+layout(location = 0) out vec4 accumOut;\n\
+layout(location = 1) out vec4 revealOut;\n\
+\n\
+vec3 handleSelect(vec3 inColor, float sel) {\n\
+  return mix(inColor, selectionColor.rgb, step(0.5, sel) * selectionColor.a);\n\
+}\n\
+vec3 handleFog(vec3 inColor, float depth) {\n\
+  if (fog) {\n\
+    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
+    return mix(inColor, fogColor, fogFactor);\n\
+  }\n\
+  return inColor;\n\
+}\n\
+// empirically-tuned weight favoring nearer and more opaque fragments; not\n\
+// copied from a specific published constant set -- see McGuire & Bavoil\n\
+// 2013 for the general technique this approximates.\n\
+float oitWeight(float z, float a) {\n\
+  return a * clamp(0.03 / (1e-5 + pow(z / 200.0, 4.0)), 1e-2, 3e3);\n\
+}\n\
+\n\
+void main(void) {\n\
+  float dp = dot(vertNormal, vec3(0.0, 0.0, 1.0));\n\
+  float hemi = min(1.0, max(0.0, dp)*0.6+0.5);\n\
+  vec4 color = vec4(vertColor.rgb*hemi, vertColor.a);\n\
+  if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
+  float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
+  color.rgb = handleFog(handleSelect(color.rgb, vertSelect), depth);\n\
+  float w = oitWeight(depth, color.a);\n\
+  accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
+  revealOut = vec4(color.a);\n\
+}',
+
+OIT_ACCUM_PHONG_FS : '#version 300 es\n\
+precision ${PRECISION} float;\n\
+\n\
+in vec4 vertColor;\n\
+in vec3 vertNormal;\n\
+in vec3 vertPos;\n\
+in float vertSelect;\n\
+uniform float zoom;\n\
+\n\
+uniform vec4 selectionColor;\n\
+uniform bool fog;\n\
+uniform float fogNear;\n\
+uniform float fogFar;\n\
+uniform vec3 fogColor;\n\
+\n\
+layout(location = 0) out vec4 accumOut;\n\
+layout(location = 1) out vec4 revealOut;\n\
+\n\
+vec3 handleSelect(vec3 inColor, float sel) {\n\
+  return mix(inColor, selectionColor.rgb, step(0.5, sel) * selectionColor.a);\n\
+}\n\
+vec3 handleFog(vec3 inColor, float depth) {\n\
+  if (fog) {\n\
+    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
+    return mix(inColor, fogColor, fogFactor);\n\
+  }\n\
+  return inColor;\n\
+}\n\
+float oitWeight(float z, float a) {\n\
+  return a * clamp(0.03 / (1e-5 + pow(z / 200.0, 4.0)), 1e-2, 3e3);\n\
+}\n\
+\n\
+void main(void) {\n\
+  vec3 eyePos = vec3(0.0, 0.0, zoom);\n\
+  float dp = dot(vertNormal, normalize(eyePos - vertPos));\n\
+  float hemi = min(1.0, max(0.3, dp)+0.2);\n\
+  vec3 rgbColor = vertColor.rgb * hemi;\n\
+  rgbColor += min(vertColor.rgb, 0.8) * pow(max(0.0, dp), 18.0);\n\
+  rgbColor = handleSelect(rgbColor, vertSelect);\n\
+  vec4 color = vec4(clamp(rgbColor, 0.0, 1.0), vertColor.a);\n\
+  if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
+  float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
+  color.rgb = handleFog(color.rgb, depth);\n\
+  float w = oitWeight(depth, color.a);\n\
+  accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
+  revealOut = vec4(color.a);\n\
+}',
+
+OIT_ACCUM_LINES_VS : '#version 300 es\n\
+in vec3 attrPos;\n\
+in vec4 attrColor;\n\
+\n\
+uniform mat4 projectionMat;\n\
+uniform mat4 modelviewMat;\n\
+out vec4 vertColor;\n\
+uniform float pointSize;\n\
+void main(void) {\n\
+  gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+  float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
+  gl_PointSize = pointSize * 200.0 / abs(distToCamera); \n\
+  vertColor = attrColor;\n\
+}',
+
+OIT_ACCUM_LINES_FS : '#version 300 es\n\
+precision ${PRECISION} float;\n\
+\n\
+in vec4 vertColor;\n\
+uniform bool fog;\n\
+uniform float fogNear;\n\
+uniform float fogFar;\n\
+uniform vec3 fogColor;\n\
+\n\
+layout(location = 0) out vec4 accumOut;\n\
+layout(location = 1) out vec4 revealOut;\n\
+\n\
+vec3 handleFog(vec3 inColor, float depth) {\n\
+  if (fog) {\n\
+    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
+    return mix(inColor, fogColor, fogFactor);\n\
+  }\n\
+  return inColor;\n\
+}\n\
+float oitWeight(float z, float a) {\n\
+  return a * clamp(0.03 / (1e-5 + pow(z / 200.0, 4.0)), 1e-2, 3e3);\n\
+}\n\
+\n\
+void main(void) {\n\
+  vec4 color = vertColor;\n\
+  if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
+  float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
+  color.rgb = handleFog(color.rgb, depth);\n\
+  float w = oitWeight(depth, color.a);\n\
+  accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
+  revealOut = vec4(color.a);\n\
+}',
+
+// fullscreen-triangle composite pass: blends the accumulation/revealage
+// targets over the opaque scene. No vertex buffer needed -- the triangle is
+// generated directly from gl_VertexID and oversized to cover the viewport.
+OIT_COMPOSITE_VS : '#version 300 es\n\
+out vec2 vertUv;\n\
+void main(void) {\n\
+  vec2 pos = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n\
+  vertUv = pos;\n\
+  gl_Position = vec4(pos * 2.0 - 1.0, 0.0, 1.0);\n\
+}',
+
+OIT_COMPOSITE_FS : '#version 300 es\n\
+precision ${PRECISION} float;\n\
+in vec2 vertUv;\n\
+uniform sampler2D opaqueColor;\n\
+uniform sampler2D accumTex;\n\
+uniform sampler2D revealTex;\n\
+out vec4 fragColor;\n\
+void main(void) {\n\
+  vec4 accum = texture(accumTex, vertUv);\n\
+  float reveal = texture(revealTex, vertUv).a;\n\
+  vec3 opaque = texture(opaqueColor, vertUv).rgb;\n\
+  vec3 averageColor = accum.rgb / max(accum.a, 1e-5);\n\
+  vec3 finalColor = averageColor * (1.0 - reveal) + opaque * reveal;\n\
+  fragColor = vec4(finalColor, 1.0);\n\
+}',
+
+// trivial fullscreen blit, reusing OIT_COMPOSITE_VS's vertex shader: used
+// to present the opaque target directly when OIT isn't supported (no
+// accumulation/revealage targets exist in that case). WebGL2's
+// blitFramebuffer can't target a multisampled default framebuffer (the
+// canvas is multisampled whenever antialiasing is on), so this shader-based
+// copy is used instead of gl.blitFramebuffer for that case.
+OIT_BLIT_FS : '#version 300 es\n\
+precision ${PRECISION} float;\n\
+in vec2 vertUv;\n\
+uniform sampler2D opaqueColor;\n\
+out vec4 fragColor;\n\
+void main(void) {\n\
+  fragColor = vec4(texture(opaqueColor, vertUv).rgb, 1.0);\n\
 }'
 
 };

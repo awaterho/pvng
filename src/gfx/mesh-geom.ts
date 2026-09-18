@@ -37,6 +37,8 @@ interface ShaderCatalog {
   phong: Shader;
   select: Shader;
   outline: Shader;
+  hemilightTransparent?: Shader;
+  phongTransparent?: Shader;
   [pass: string]: Shader | undefined;
 }
 
@@ -190,6 +192,13 @@ utils.derive(MeshGeom, BaseGeom, {
         return shaderCatalog.hemilight;
       } else {
         return shaderCatalog.phong;
+      }
+    }
+    if (pass === 'transparent') {
+      if (style === 'hemilight') {
+        return shaderCatalog.hemilightTransparent ?? null;
+      } else {
+        return shaderCatalog.phongTransparent ?? null;
       }
     }
     if (pass === 'select') {

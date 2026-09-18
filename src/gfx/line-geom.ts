@@ -34,6 +34,7 @@ interface ShaderCatalog {
   selectLines: Shader;
   select: Shader;
   lines: Shader;
+  linesTransparent?: Shader;
 }
 
 interface LGChain {
@@ -101,6 +102,9 @@ utils.derive(LineGeom, BaseGeom, {
     }
     if (pass === 'select') {
       return shaderCatalog.select;
+    }
+    if (pass === 'transparent') {
+      return shaderCatalog.linesTransparent ?? null;
     }
     return shaderCatalog.lines;
   },

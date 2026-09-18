@@ -251,6 +251,7 @@ class Canvas {
     shaderProgram.zoom = getUniformLoc(shaderProgram, 'zoom')!;
     shaderProgram.outlineEnabled = getUniformLoc(shaderProgram,
                                                  'outlineEnabled')!;
+    shaderProgram.opaqueOnly = getUniformLoc(shaderProgram, 'opaqueOnly')!;
 
     return shaderProgram as unknown as ShaderProgram;
   }

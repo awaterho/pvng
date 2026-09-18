@@ -43,6 +43,7 @@ export interface ShaderProgram extends WebGLProgram {
   relativePixelSize: WebGLUniformLocation;
   outlineWidth: WebGLUniformLocation;
   outlineEnabled: WebGLUniformLocation;
+  opaqueOnly: WebGLUniformLocation;
   stateId: number;
 }
 
@@ -101,6 +102,7 @@ class Cam {
   private _outlineColor: vec3;
   private _outlineWidth: number;
   private _outlineEnabled: boolean;
+  private _opaqueOnly: boolean;
   private _selectionColor: vec4;
   private _center: vec3;
   private _zoom: number;
@@ -131,6 +133,7 @@ class Cam {
     this._outlineColor = vec3.fromValues(0.1, 0.1, 0.1);
     this._outlineWidth = 1.0;
     this._outlineEnabled = true;
+    this._opaqueOnly = false;
     this._selectionColor = vec4.fromValues(0.1, 1.0, 0.1, 0.7);
     this._center = vec3.create();
     this._zoom = 50;
@@ -152,6 +155,15 @@ class Cam {
 
   setOutlineEnabled(value: boolean): void {
     this._outlineEnabled = value;
+    this._incrementStateId();
+  }
+
+  // when true, handleAlpha() (shaders.ts's PRELUDE_FS) discards any
+  // fragment that isn't fully opaque, instead of blending it -- used for
+  // the opaque pass of weighted blended OIT, so translucent fragments are
+  // left for the separate accumulation pass to handle. See Viewer._draw().
+  setOpaqueOnly(value: boolean): void {
+    this._opaqueOnly = value;
     this._incrementStateId();
   }
 
@@ -462,6 +474,7 @@ class Cam {
     gl.uniform2fv(shader.relativePixelSize, this._relativePixelSize);
     gl.uniform1f(shader.outlineWidth, this._outlineWidth);
     gl.uniform1i(shader.outlineEnabled, this._outlineEnabled ? 1 : 0);
+    gl.uniform1i(shader.opaqueOnly, this._opaqueOnly ? 1 : 0);
   }
 }
 

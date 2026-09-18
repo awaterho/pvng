@@ -24,6 +24,7 @@ import UniqueObjectIdPool from './unique-object-id-pool';
 import canvasModule from './gfx/canvas';
 import utils, { Range } from './utils';
 import FrameBuffer from './gfx/framebuffer';
+import SceneBuffers from './gfx/oit-buffers';
 import PoolAllocator from './buffer-allocators';
 import Cam, { type ShaderProgram } from './gfx/cam';
 import shaders from './gfx/shaders';
@@ -61,6 +62,14 @@ type CanvasT = InstanceType<typeof canvasModule.Canvas>;
 type SlabStrategy = InstanceType<typeof slab.FixedSlab> | InstanceType<typeof slab.AutoSlab> | null;
 type EventCallback = (arg: unknown, event: unknown) => void;
 type ClickHandler = EventCallback | 'center' | null;
+
+// minimal structural type for the OES_draw_buffers_indexed extension object
+// (not part of TypeScript's DOM lib): per-drawbuffer blend function, needed
+// so the OIT accumulation pass's two render targets can each use a
+// different blend equation in the same MRT draw call.
+interface DrawBuffersIndexedExt {
+  blendFunciOES(buf: number, src: number, dst: number): void;
+}
 
 // structural typing for the geometry objects tracked in this._objects: only
 // what Viewer itself touches, common to every BaseGeom-derived render result
@@ -312,6 +321,12 @@ class Viewer {
   _mouseHandler!: MouseHandler;
   private _touchHandler!: TouchHandler;
   private _pickBuffer!: FrameBuffer;
+  private _sceneBuffers!: SceneBuffers;
+  private _compositeShader!: ShaderProgram;
+  private _compositeUniforms!: { opaqueColor: WebGLUniformLocation | null; accumTex: WebGLUniformLocation | null; revealTex: WebGLUniformLocation | null };
+  private _blitShader!: ShaderProgram;
+  private _blitUniforms!: { opaqueColor: WebGLUniformLocation | null };
+  private _drawBuffersIndexedExt: DrawBuffersIndexedExt | null = null;
   private _2dcontext!: CanvasRenderingContext2D;
   private _float32Allocator!: PoolAllocator<Float32Array>;
   private _uint16Allocator!: PoolAllocator<Uint16Array>;
@@ -413,6 +428,7 @@ class Viewer {
     this._cam.setViewportSize(this._canvas!.viewportWidth(),
                               this._canvas!.viewportHeight());
     this._pickBuffer.resize(this._options.width, this._options.height);
+    this._sceneBuffers.resize(this._canvas!.viewportWidth(), this._canvas!.viewportHeight());
   }
 
   resize(width: number, height: number): void {
@@ -538,13 +554,50 @@ class Viewer {
       select : c.initShader(shaders.SELECT_VS, shaders.SELECT_FS, p)
     };
     if (c.gl().getExtension('EXT_frag_depth')) {
+      // billboarded spheres don't have an OIT accumulation variant yet, so
+      // they're compiled against PRELUDE_FS_ALWAYS_BLEND instead of
+      // PRELUDE_FS -- see that shader's comment.
       this._shaderCatalog.spheres =
         c.initShader(shaders.SPHERES_VS,
-                     shaders.PRELUDE_FS + shaders.SPHERES_FS, p);
+                     shaders.PRELUDE_FS_ALWAYS_BLEND + shaders.SPHERES_FS, p);
       this._shaderCatalog.selectSpheres =
         c.initShader(shaders.SELECT_SPHERES_VS,
-                     shaders.PRELUDE_FS + shaders.SELECT_SPHERES_FS, p);
+                     shaders.PRELUDE_FS_ALWAYS_BLEND + shaders.SELECT_SPHERES_FS, p);
     }
+
+    this._sceneBuffers = new SceneBuffers(c.gl(), {
+      width : c.viewportWidth(), height : c.viewportHeight(),
+    });
+    this._blitShader = c.initShader(shaders.OIT_COMPOSITE_VS, shaders.OIT_BLIT_FS, p)!;
+    this._blitUniforms = {
+      opaqueColor : c.gl().getUniformLocation(this._blitShader, 'opaqueColor'),
+    };
+    if (this._sceneBuffers.oitSupported()) {
+      this._shaderCatalog.hemilightTransparent =
+        c.initShader(shaders.OIT_ACCUM_VS, shaders.OIT_ACCUM_HEMILIGHT_FS, p);
+      this._shaderCatalog.phongTransparent =
+        c.initShader(shaders.OIT_ACCUM_VS, shaders.OIT_ACCUM_PHONG_FS, p);
+      this._shaderCatalog.linesTransparent =
+        c.initShader(shaders.OIT_ACCUM_LINES_VS, shaders.OIT_ACCUM_LINES_FS, p);
+      this._compositeShader = c.initShader(
+        shaders.OIT_COMPOSITE_VS, shaders.OIT_COMPOSITE_FS, p,
+      )!;
+      const gl2 = c.gl();
+      this._compositeUniforms = {
+        opaqueColor : gl2.getUniformLocation(this._compositeShader, 'opaqueColor'),
+        accumTex : gl2.getUniformLocation(this._compositeShader, 'accumTex'),
+        revealTex : gl2.getUniformLocation(this._compositeShader, 'revealTex'),
+      };
+      // per-drawbuffer blend state: the accumulation target needs additive
+      // blending while the revealage target needs multiplicative blending,
+      // in the same MRT draw call -- core WebGL2 only has one blend state
+      // shared by every draw buffer, so this needs the indexed variant.
+      this._drawBuffersIndexedExt = gl2.getExtension('OES_draw_buffers_indexed');
+      if (this._drawBuffersIndexedExt === null) {
+        this._sceneBuffers.disableOit();
+      }
+    }
+    this._cam.setOpaqueOnly(this._sceneBuffers.oitSupported());
     this._boundDraw = utils.bind(this, this._draw) as () => void;
     this._touchHandler = new TouchHandler(this._canvas!.domElement(),
                                           this, this._cam);
@@ -723,7 +776,6 @@ class Viewer {
     // calculated in canvas._ensureSize()
     this._ensureSize();
     const gl = this._canvas.gl();
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const newSlab = this._options.slabMode
         ? (this._options.slabMode.update as (objects: unknown[], cam: unknown) => InstanceType<typeof slab.Slab> | null)(
@@ -733,16 +785,104 @@ class Viewer {
       this._cam.setNearFar(newSlab.near, newSlab.far);
     }
 
+    const oit = this._sceneBuffers.oitSupported();
+
+    // opaque pass: outline (silhouette) geometry and every fully-opaque
+    // fragment, rendered into an offscreen target rather than directly onto
+    // the canvas -- the transparent pass below (when OIT is supported)
+    // needs to depth-test against this same depth buffer without writing to
+    // it, which isn't possible against the canvas's own default framebuffer.
+    this._sceneBuffers.bindOpaque();
+    gl.depthMask(true);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.CULL_FACE);
+    // blending stays on for the whole opaque-target pass: it's a no-op for
+    // the OIT-participating shaders (hemilight/phong/lines), which only let
+    // fully-opaque fragments reach this pass when oit is true (see
+    // shaders.ts's PRELUDE_FS opaqueOnly gate), but billboarded spheres
+    // don't have an OIT accumulation variant (see PRELUDE_FS_ALWAYS_BLEND)
+    // and still rely on plain blending here for translucency to render at
+    // all, whether or not OIT is active.
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     if (this._options.outline) {
       gl.cullFace(gl.BACK);
-      gl.enable(gl.CULL_FACE);
       this._drawWithPass('outline');
     }
     gl.cullFace(gl.FRONT);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     this._drawWithPass('normal');
+    gl.disable(gl.BLEND);
+
+    if (oit) {
+      this._drawTransparent(gl);
+    }
+
+    this._compositeToCanvas(gl, oit);
+  }
+
+  // transparent pass: renders only translucent fragments (every
+  // participating shader discards fragments with alpha ~1) into the
+  // accumulation/revealage targets, depth-testing against (but not writing
+  // to) the opaque pass's depth buffer. See gfx/oit-buffers.ts and
+  // shaders.ts's OIT_ACCUM_*_FS for the weighted-blended-OIT math.
+  private _drawTransparent(gl: WebGL2RenderingContext): void {
+    this._sceneBuffers.bindTransparent();
+    gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 0]);
+    gl.clearBufferfv(gl.COLOR, 1, [1, 1, 1, 1]);
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    const ext = this._drawBuffersIndexedExt!;
+    ext.blendFunciOES(0, gl.ONE, gl.ONE);
+    ext.blendFunciOES(1, gl.ZERO, gl.ONE_MINUS_SRC_ALPHA);
+    this._drawWithPass('transparent');
+    gl.disable(gl.BLEND);
+    gl.depthMask(true);
+  }
+
+  // composites the (optional) transparent accumulation onto the opaque
+  // target and presents the result on the visible canvas.
+  private _compositeToCanvas(gl: WebGL2RenderingContext, oit: boolean): void {
+    const width = this._canvas!.viewportWidth();
+    const height = this._canvas!.viewportHeight();
+    if (!oit) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, width, height);
+      gl.disable(gl.DEPTH_TEST);
+      gl.disable(gl.BLEND);
+      gl.disable(gl.CULL_FACE);
+      gl.useProgram(this._blitShader);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.opaqueColorTexture());
+      gl.uniform1i(this._blitUniforms.opaqueColor, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+      this._cam.invalidateCurrentShader();
+      return;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, width, height);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    // CULL_FACE is still enabled (cullFace(FRONT)) from the opaque pass --
+    // the fullscreen composite triangle is front-facing and would be
+    // silently culled entirely otherwise.
+    gl.disable(gl.CULL_FACE);
+    gl.useProgram(this._compositeShader);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.opaqueColorTexture());
+    gl.uniform1i(this._compositeUniforms.opaqueColor, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.accumTexture());
+    gl.uniform1i(this._compositeUniforms.accumTex, 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this._sceneBuffers.revealTexture());
+    gl.uniform1i(this._compositeUniforms.revealTex, 2);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    this._cam.invalidateCurrentShader();
   }
 
   setCenter(center: vec3, ms?: number): void {

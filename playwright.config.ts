@@ -12,4 +12,12 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173',
   },
+  expect: {
+    // screenshot baselines are compared across GPU/driver combinations that
+    // can render the exact same scene with slightly different antialiasing/
+    // rounding; a small tolerance avoids flaking on that noise while still
+    // catching real regressions (wrong colors, missing geometry, broken
+    // blending).
+    toHaveScreenshot: { maxDiffPixelRatio: 0.02 },
+  },
 });
