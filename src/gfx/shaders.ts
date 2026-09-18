@@ -20,7 +20,6 @@
 
 export interface ShaderSources {
   PRELUDE_FS: string;
-  PRELUDE_FS_ALWAYS_BLEND: string;
   LINES_FS: string;
   SELECT_LINES_FS: string;
   SELECT_LINES_VS: string;
@@ -43,6 +42,8 @@ export interface ShaderSources {
   OIT_ACCUM_PHONG_FS: string;
   OIT_ACCUM_LINES_VS: string;
   OIT_ACCUM_LINES_FS: string;
+  OIT_ACCUM_SPHERES_VS: string;
+  OIT_ACCUM_SPHERES_FS: string;
   OIT_COMPOSITE_VS: string;
   OIT_COMPOSITE_FS: string;
   OIT_BLIT_FS: string;
@@ -68,44 +69,6 @@ vec4 handleAlpha(vec4 inColor) {\n\
     if (inColor.a < 0.999) { discard; }\n\
     return inColor;\n\
   }\n\
-  if (inColor.a == 0.0) { discard; }\n\
-  return inColor;\n\
-} \n\
-\n\
-int intMod(int x, int y) { \n\
-  int z = x/y;\n\
-  return x-y*z;\n\
-}\n\
-\n\
-uniform vec4 selectionColor;\n\
-\n\
-vec3 handleSelect(vec3 inColor, float vertSelect) { \n\
-  return mix(inColor, selectionColor.rgb, \n\
-             step(0.5, vertSelect) * selectionColor.a); \n\
-} \n\
-\n\
-uniform bool fog;\n\
-uniform float fogNear;\n\
-uniform float fogFar;\n\
-uniform vec3 fogColor;\n\
-vec3 handleFog(vec3 inColor) {\n\
-  if (fog) {\n\
-    float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
-    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
-    return mix(inColor, fogColor, fogFactor);\n\
-  } else {\n\
-    return inColor;\n\
-  }\n\
-}',
-
-// billboarded spheres don't (yet) have a weighted-blended-OIT accumulation
-// variant (see OIT_ACCUM_*_FS), so they're deliberately exempted from
-// PRELUDE_FS's opaqueOnly gate -- a translucent sphere renders via plain
-// (non-order-independent) alpha blending instead of silently disappearing
-// during the opaque pass. Identical to PRELUDE_FS otherwise.
-PRELUDE_FS_ALWAYS_BLEND : '\n\
-precision ${PRECISION} float;\n\
-vec4 handleAlpha(vec4 inColor) {\n\
   if (inColor.a == 0.0) { discard; }\n\
   return inColor;\n\
 } \n\
@@ -686,6 +649,103 @@ void main(void) {\n\
   float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
   color.rgb = handleFog(color.rgb, depth);\n\
   float w = oitWeight(depth, color.a);\n\
+  accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
+  revealOut = vec4(color.a);\n\
+}',
+
+// ES 3.00 accumulation counterpart of SPHERES_VS/SPHERES_FS -- same
+// billboard-quad/sphere-normal math, but writes to the OIT accumulation
+// targets instead of gl_FragColor, and uses native gl_FragDepth instead of
+// gl_FragDepthEXT (core in ES 3.00, no extension needed).
+OIT_ACCUM_SPHERES_VS : '#version 300 es\n\
+in vec3 attrPos;\n\
+in vec4 attrColor;\n\
+in vec3 attrNormal;\n\
+in float attrSelect;\n\
+uniform vec2 relativePixelSize;\n\
+uniform float outlineWidth;\n\
+out float radius;\n\
+\n\
+uniform mat4 projectionMat;\n\
+uniform mat4 modelviewMat;\n\
+uniform mat4 rotationMat;\n\
+out vec4 vertColor;\n\
+out vec2 vertTex;\n\
+out float border;\n\
+out vec4 vertCenter;\n\
+out float vertSelect;\n\
+void main() {\n\
+  vec3 d = vec3(attrNormal.xy * attrNormal.z, 0.0);\n\
+  vec4 rotated = vec4(d, 0.0)*rotationMat;\n\
+  gl_Position = projectionMat * modelviewMat * \n\
+                (vec4(attrPos, 1.0)+rotated);\n\
+  vertTex = attrNormal.xy;\n\
+  vertColor = attrColor;\n\
+  vertSelect = attrSelect;\n\
+  vertCenter = modelviewMat* vec4(attrPos, 1.0);\n\
+  float dist = length((projectionMat * vertCenter).xy - gl_Position.xy);\n\
+  float dd = dist / gl_Position.w;\n\
+  border = 1.0 - outlineWidth * 1.4 * length(relativePixelSize)/dd;\n\
+  radius = attrNormal.z;\n\
+}',
+
+OIT_ACCUM_SPHERES_FS : '#version 300 es\n\
+precision ${PRECISION} float;\n\
+\n\
+in vec2 vertTex;\n\
+in vec4 vertCenter;\n\
+in vec4 vertColor;\n\
+in float vertSelect;\n\
+in float radius;\n\
+uniform mat4 projectionMat;\n\
+uniform vec3 outlineColor;\n\
+in float border;\n\
+uniform bool outlineEnabled;\n\
+uniform vec4 selectionColor;\n\
+uniform bool fog;\n\
+uniform float fogNear;\n\
+uniform float fogFar;\n\
+uniform vec3 fogColor;\n\
+\n\
+layout(location = 0) out vec4 accumOut;\n\
+layout(location = 1) out vec4 revealOut;\n\
+\n\
+vec3 handleSelect(vec3 inColor, float sel) {\n\
+  return mix(inColor, selectionColor.rgb, step(0.5, sel) * selectionColor.a);\n\
+}\n\
+vec3 handleFog(vec3 inColor, float depth) {\n\
+  if (fog) {\n\
+    float fogFactor = smoothstep(fogNear, fogFar, depth);\n\
+    return mix(inColor, fogColor, fogFactor);\n\
+  }\n\
+  return inColor;\n\
+}\n\
+float oitWeight(float z, float a) {\n\
+  return a * clamp(0.03 / (1e-5 + pow(z / 200.0, 4.0)), 1e-2, 3e3);\n\
+}\n\
+\n\
+void main(void) {\n\
+  float zz = dot(vertTex, vertTex);\n\
+  if (zz > 1.0)\n\
+    discard;\n\
+  vec3 normal = vec3(vertTex.x, vertTex.y, sqrt(1.0-zz));\n\
+  vec3 pos = vertCenter.xyz + normal * radius;\n\
+  float dp = normal.z;\n\
+  float hemi = sqrt(min(1.0, max(0.3, dp) + 0.2));\n\
+  vec4 projected = projectionMat * vec4(pos, 1.0);\n\
+  float depth = projected.z / projected.w;\n\
+  gl_FragDepth = (depth + 1.0) * 0.5;\n\
+  vec3 rgbColor = vertColor.rgb * hemi; \n\
+  rgbColor += min(vertColor.rgb, 0.8) * pow(max(0.0, dp), 18.0);\n\
+  if (outlineEnabled) { \n\
+    rgbColor = mix(rgbColor * hemi, outlineColor, step(border, sqrt(zz)));\n\
+  } else { \n\
+    rgbColor *= hemi; \n\
+  } \n\
+  rgbColor = handleSelect(rgbColor, vertSelect);\n\
+  vec4 color = vec4(handleFog(rgbColor, gl_FragCoord.z / gl_FragCoord.w), vertColor.a);\n\
+  if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
+  float w = oitWeight(gl_FragCoord.z / gl_FragCoord.w, color.a);\n\
   accumOut = vec4(color.rgb * color.a * w, color.a * w);\n\
   revealOut = vec4(color.a);\n\
 }',

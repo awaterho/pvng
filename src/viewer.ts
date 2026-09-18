@@ -553,16 +553,14 @@ class Viewer {
                                  shaders.SELECT_LINES_FS, p),
       select : c.initShader(shaders.SELECT_VS, shaders.SELECT_FS, p)
     };
-    if (c.gl().getExtension('EXT_frag_depth')) {
-      // billboarded spheres don't have an OIT accumulation variant yet, so
-      // they're compiled against PRELUDE_FS_ALWAYS_BLEND instead of
-      // PRELUDE_FS -- see that shader's comment.
+    const hasFragDepth = !!c.gl().getExtension('EXT_frag_depth');
+    if (hasFragDepth) {
       this._shaderCatalog.spheres =
         c.initShader(shaders.SPHERES_VS,
-                     shaders.PRELUDE_FS_ALWAYS_BLEND + shaders.SPHERES_FS, p);
+                     shaders.PRELUDE_FS + shaders.SPHERES_FS, p);
       this._shaderCatalog.selectSpheres =
         c.initShader(shaders.SELECT_SPHERES_VS,
-                     shaders.PRELUDE_FS_ALWAYS_BLEND + shaders.SELECT_SPHERES_FS, p);
+                     shaders.PRELUDE_FS + shaders.SELECT_SPHERES_FS, p);
     }
 
     this._sceneBuffers = new SceneBuffers(c.gl(), {
@@ -577,6 +575,10 @@ class Viewer {
         c.initShader(shaders.OIT_ACCUM_VS, shaders.OIT_ACCUM_HEMILIGHT_FS, p);
       this._shaderCatalog.phongTransparent =
         c.initShader(shaders.OIT_ACCUM_VS, shaders.OIT_ACCUM_PHONG_FS, p);
+      if (hasFragDepth) {
+        this._shaderCatalog.spheresTransparent =
+          c.initShader(shaders.OIT_ACCUM_SPHERES_VS, shaders.OIT_ACCUM_SPHERES_FS, p);
+      }
       this._shaderCatalog.linesTransparent =
         c.initShader(shaders.OIT_ACCUM_LINES_VS, shaders.OIT_ACCUM_LINES_FS, p);
       this._compositeShader = c.initShader(
@@ -796,13 +798,12 @@ class Viewer {
     gl.depthMask(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.CULL_FACE);
-    // blending stays on for the whole opaque-target pass: it's a no-op for
-    // the OIT-participating shaders (hemilight/phong/lines), which only let
-    // fully-opaque fragments reach this pass when oit is true (see
-    // shaders.ts's PRELUDE_FS opaqueOnly gate), but billboarded spheres
-    // don't have an OIT accumulation variant (see PRELUDE_FS_ALWAYS_BLEND)
-    // and still rely on plain blending here for translucency to render at
-    // all, whether or not OIT is active.
+    // blending stays on for the whole opaque-target pass: when oit is true
+    // it's a no-op, since every shader only lets fully-opaque fragments
+    // reach this pass (shaders.ts's PRELUDE_FS opaqueOnly gate); when oit is
+    // false (no float-render-target support) this is the only blending that
+    // happens all frame, since there's no separate transparent pass to fall
+    // back to.
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     if (this._options.outline) {

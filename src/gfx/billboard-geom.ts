@@ -24,6 +24,7 @@ import type Cam from './cam';
 interface ShaderCatalog {
   spheres: unknown;
   selectSpheres: unknown;
+  spheresTransparent?: unknown;
   [pass: string]: unknown;
 }
 
@@ -63,6 +64,9 @@ utils.derive(BillboardGeom, MeshGeom, {
     // uniform.
     if (pass === 'normal') {
       return shaderCatalog.spheres;
+    }
+    if (pass === 'transparent') {
+      return shaderCatalog.spheresTransparent ?? null;
     }
     if (pass === 'select') {
       return shaderCatalog.selectSpheres;
