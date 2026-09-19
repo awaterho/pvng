@@ -15,6 +15,7 @@ build
 *.pyc
 *.egg-info
 dist
+dist-debug
 .ipynb_checkpoints
 .idea/workspace.xml
 test-results

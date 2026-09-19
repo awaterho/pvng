@@ -129,7 +129,6 @@ function hex2rgb(color: string, alpha?: number): RGBA | undefined {
 
 // provide an override of the default color setting.
 function setColorPalette(customColors: Record<string, RGBA>): void {
-  console.log("setting colors");
   COLORS = customColors;
   initGradients();
 }

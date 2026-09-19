@@ -238,7 +238,6 @@ const spheresForChain = (function() {
 })();
 
 exports.spheres = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('spheres');
   const protoSphere = new ProtoSphere(opts.sphereDetail, opts.sphereDetail);
   opts.protoSphere = protoSphere;
   const geom = new MeshGeomCtor(gl, opts.float32Allocator, opts.uint16Allocator);
@@ -250,7 +249,6 @@ exports.spheres = function(structure: RenderStructure, gl: WebGL2RenderingContex
     spheresForChain(geom, vertAssoc, opts, chain);
   });
   opts.color.end();
-  console.timeEnd('spheres');
   return geom;
 };
 
@@ -286,7 +284,6 @@ const billboardedSpheresForChain = (function() {
 })();
 
 exports.billboardedSpheres = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('billboardedSpheres');
   const geom = new BillboardGeomCtor(gl, opts.float32Allocator,
                                opts.uint16Allocator);
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
@@ -297,7 +294,6 @@ exports.billboardedSpheres = function(structure: RenderStructure, gl: WebGL2Rend
     billboardedSpheresForChain(geom, vertAssoc, opts, chain);
   });
   opts.color.end();
-  console.timeEnd('billboardedSpheres');
   return geom;
 };
 
@@ -358,7 +354,6 @@ const ballsAndSticksForChain = (function() {
 })();
 
 exports.ballsAndSticks = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('ballsAndSticks');
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
   const protoSphere = new ProtoSphere(opts.sphereDetail, opts.sphereDetail);
   const protoCyl = new ProtoCylinder(opts.arcDetail);
@@ -373,7 +368,6 @@ exports.ballsAndSticks = function(structure: RenderStructure, gl: WebGL2Renderin
     ballsAndSticksForChain(meshGeom, vertAssoc, opts, chain);
   });
   opts.color.end();
-  console.timeEnd('ballsAndSticks');
   return meshGeom;
 };
 
@@ -401,7 +395,6 @@ const pointsForChain = (function () {
 
 
 exports.points = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('points');
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
   opts.color.begin(structure as never);
   const lineGeom = new LineGeomCtor(gl, opts.float32Allocator);
@@ -412,7 +405,6 @@ exports.points = function(structure: RenderStructure, gl: WebGL2RenderingContext
     pointsForChain(lineGeom, vertAssoc, chain, opts);
   });
   opts.color.end();
-  console.timeEnd('points');
   return lineGeom;
 };
 
@@ -466,7 +458,6 @@ const linesForChain = (function () {
 
 
 exports.lines = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('lines');
   const vertAssoc = new AtomVertexAssoc(structure as never, true);
   opts.color.begin(structure as never);
   const lineGeom = new LineGeomCtor(gl, opts.float32Allocator);
@@ -477,7 +468,6 @@ exports.lines = function(structure: RenderStructure, gl: WebGL2RenderingContext,
     linesForChain(lineGeom, vertAssoc, chain, opts);
   });
   opts.color.end();
-  console.timeEnd('lines');
   return lineGeom;
 };
 
@@ -565,7 +555,6 @@ const lineTraceForChain = function(lineGeom: LineGeom, vertAssoc: InstanceType<t
 exports.lineTrace = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
 
 
-  console.time('lineTrace');
   const vertAssoc = new TraceVertexAssoc(structure as never, 1, true);
   opts.color.begin(structure as never);
   const lineGeom = new LineGeomCtor(gl, opts.float32Allocator);
@@ -578,7 +567,6 @@ exports.lineTrace = function(structure: RenderStructure, gl: WebGL2RenderingCont
   lineGeom.addVertAssoc(vertAssoc as never);
   lineGeom.setShowRelated(opts.showRelated);
   opts.color.end();
-  console.timeEnd('lineTrace');
   return lineGeom;
 };
 
@@ -671,7 +659,6 @@ const slineForChain = function(lineGeom: LineGeom, vertAssoc: InstanceType<typeo
 };
 
 exports.sline = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('sline');
   opts.color.begin(structure as never);
   const vertAssoc =
       new TraceVertexAssoc(structure as never, opts.splineDetail, true);
@@ -684,7 +671,6 @@ exports.sline = function(structure: RenderStructure, gl: WebGL2RenderingContext,
     traceIndex = slineForChain(lineGeom, vertAssoc, opts, chain, traceIndex);
   });
   opts.color.end();
-  console.timeEnd('sline');
   return lineGeom;
 };
 
@@ -723,8 +709,6 @@ const traceForChain = function(meshGeom: MeshGeom, vertAssoc: InstanceType<typeo
 };
 
 exports.trace = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('trace');
-
   opts.protoCyl = new ProtoCylinder(opts.arcDetail);
   opts.protoSphere =
       new ProtoSphere(opts.sphereDetail, opts.sphereDetail);
@@ -742,7 +726,6 @@ exports.trace = function(structure: RenderStructure, gl: WebGL2RenderingContext,
   });
   opts.color.end();
 
-  console.timeEnd('trace');
   return meshGeom;
 };
 
@@ -869,7 +852,6 @@ const cartoonForChain = function(
 };
 
 exports.cartoon = function(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions) {
-  console.time('cartoon');
   opts.arrowSkip = Math.floor(opts.splineDetail * 3 / 4);
   opts.coilProfile = new TubeProfile(COIL_POINTS, opts.arcDetail, 1.0);
   opts.arrowProfile = new TubeProfile(ARROW_POINTS, opts.arcDetail/2, 0.1);
@@ -901,7 +883,6 @@ exports.cartoon = function(structure: RenderStructure, gl: WebGL2RenderingContex
   });
 
   opts.color.end();
-  console.timeEnd('cartoon');
   return meshGeom;
 };
 

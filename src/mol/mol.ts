@@ -239,7 +239,6 @@ abstract class MolBase<C extends MolChain> {
 
 
   residueSelect(predicate: (residue: unknown) => boolean): MolView {
-    console.time('Mol.residueSelect');
     const view = new MolView(this.full() as Mol);
     for (let ci = 0; ci < this._chains.length; ++ci) {
       const chain = this._chains[ci]!;
@@ -254,12 +253,10 @@ abstract class MolBase<C extends MolChain> {
         }
       }
     }
-    console.timeEnd('Mol.residueSelect');
     return view;
   }
 
   atomSelect(predicate: (atom: unknown) => boolean): MolView {
-    console.time('Mol.atomSelect');
     const view = new MolView(this.full() as Mol);
     for (let ci = 0; ci < this._chains.length; ++ci) {
       const chain = this._chains[ci]!;
@@ -283,7 +280,6 @@ abstract class MolBase<C extends MolChain> {
         }
       }
     }
-    console.timeEnd('Mol.atomSelect');
     return view;
   }
 
@@ -325,7 +321,6 @@ abstract class MolBase<C extends MolChain> {
       mol: { eachAtom(cb: (a: MolAtomLike) => void): void },
       options?: { radius?: number; matchResidues?: boolean },
     ): MolView {
-      console.time('Mol.selectWithin');
       options = options || {};
       const radius = options.radius || 4.0;
       const radiusSqr = radius * radius;
@@ -373,7 +368,6 @@ abstract class MolBase<C extends MolChain> {
           }
         }
       }
-      console.timeEnd('Mol.selectWithin');
       return view;
     };
   })();
@@ -451,7 +445,6 @@ class Mol extends MolBase<Chain> {
   // determine connectivity structure. for simplicity only connects atoms of the
   // same residue, peptide bonds and nucleotides
   deriveConnectivity(): void {
-    console.time('Mol.deriveConnectivity');
     let prevResidue: (ConnectableResidue & { _deduceType(): void; isAminoacid(): boolean; isNucleotide(): boolean }) | null = null;
     this.eachResidue((res) => {
       const residue = res as ConnectableResidue & {
@@ -486,7 +479,6 @@ class Mol extends MolBase<Chain> {
       }
       prevResidue = residue;
     });
-    console.timeEnd('Mol.deriveConnectivity');
   }
 }
 

@@ -158,11 +158,9 @@ const superpose = (function() {
     // one of the axis. If we don't do this, the resulting matrix is not a
     // rotation but a mirroring.
     if (detU * detV < 0.0) {
-      console.log('determinants smaller than zero!');
       tmp[8] = -1;
       mat3.mul(uMat, uMat, tmp);
     }
-    console.log(mat3.str(uMat));
     mat3.mul(rotation, mat3.transpose(vMat, vMat), uMat);
     //mat3.transpose(rotation, rotation);
     // apply transformation to all atoms

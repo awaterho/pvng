@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
@@ -14,10 +14,12 @@ export default defineConfig({
       },
     },
     sourcemap: true,
+    minify: mode === 'debug' ? false : true,
+    outDir: mode === 'debug' ? 'dist-debug' : 'dist',
   },
   test: {
     environment: 'node',
     include: ['src/tests/**/*.test.js'],
     setupFiles: ['./src/tests/xhr-node-shim.js'],
   },
-});
+}));

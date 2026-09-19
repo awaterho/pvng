@@ -205,7 +205,6 @@ utils.derive(CustomMesh, SceneNode, {
         capTubeStart(this._data, startIndex, 8);
       }
       const userData = options.userData !== undefined ? options.userData : null;
-      console.log(userData);
       const objectId = this._nextObjectId({
         center : midPoint,
         userData : userData,

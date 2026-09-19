@@ -43,6 +43,7 @@ export default tseslint.config(
     // later pass rather than papered over here.
     ignores: [
       'dist/**',
+      'dist-debug/**',
       'node_modules/**',
       'js/**',
       'doc/**',

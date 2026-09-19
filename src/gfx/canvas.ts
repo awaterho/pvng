@@ -195,7 +195,6 @@ class Canvas {
     gl.shaderSource(shader, code);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.log(code);
       console.error(gl.getShaderInfoLog(shader));
       return null;
     }

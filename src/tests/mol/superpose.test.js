@@ -164,7 +164,6 @@ HETATM 2141  O   HOH A 916     -11.502 -50.640   0.340  1.00 50.23           O  
 var FRAGMENT = io.pdb(PDB_FRAGMENT);
 
 test('parse atom list specification', function(assert) {
-  console.log(sp);
   assert.strictEqual(sp.parseAtomNames(null), null);
   assert.strictEqual(sp.parseAtomNames(undefined), null);
   assert.strictEqual(sp.parseAtomNames('all'), null);

@@ -89,13 +89,11 @@ function traceAssignHelixSheet(trace: SSTrace): void {
 // TM-align: a protein structure alignment algorithm based on the Tm-sutils
 // (2005) NAR, 33(7) 2302-2309
 function assignHelixSheet(structure: SSStructure): void {
-  console.time('mol.assignHelixSheet');
   const chains = structure.chains();
   for (let ci = 0; ci < chains.length; ++ci) {
     const chain = chains[ci]!;
     chain.eachBackboneTrace(traceAssignHelixSheet);
   }
-  console.timeEnd('mol.assignHelixSheet');
 }
 
 export default {

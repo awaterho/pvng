@@ -399,8 +399,6 @@ class PDBReader {
       this._assignBondsFromConectRecords(this._structure);
     }
     this._structure.deriveConnectivity();
-    console.log('imported', this._structure.chains().length, 'chain(s),',
-                this._structure.residueCount(), 'residue(s)');
     const result = this._structure;
     this._structure = new Mol();
     this._currChain =  null;
@@ -438,7 +436,6 @@ function getLines(data: string): string[] {
 // the parent structure, the buffer could be managed on that level and
 // released once the structure is deleted.
 function pdb(text: string, options?: PdbOptions): Mol | (Mol | null)[] | undefined {
-  console.time('pdb');
   const opts = options || {};
   const lines = getLines(text);
   const reader = new PDBReader(opts);
@@ -448,7 +445,6 @@ function pdb(text: string, options?: PdbOptions): Mol | (Mol | null)[] | undefin
   for (let i = 0; i < lines.length; i++) {
     const result = reader.processLine(lines[i]!);
     if (result === reader.ERROR) {
-      console.timeEnd('pdb');
       return undefined;
     }
     if (result === reader.CONTINUE) {
@@ -467,7 +463,6 @@ function pdb(text: string, options?: PdbOptions): Mol | (Mol | null)[] | undefin
   if (structure !== null) {
     structures.push(structure);
   }
-  console.timeEnd('pdb');
   if (opts.loadAllModels) {
     return structures;
   }
@@ -638,7 +633,6 @@ class CRDReader {
 }
 
 function sdf(text: string): Mol | null {
-  console.time('sdf');
   const reader = new SDFReader();
   const lines = getLines(text);
   for (let i = 0; i < lines.length; i++) {
@@ -646,13 +640,10 @@ function sdf(text: string): Mol | null {
       break;
     }
   }
-  const structure = reader.finish();
-  console.timeEnd('sdf');
-  return structure;
+  return reader.finish();
 }
 
 function crd(text: string): Mol {
-  console.time('crd');
   const reader = new CRDReader();
   const lines = getLines(text);
   for (let i = 0; i < lines.length; i++) {
@@ -660,9 +651,7 @@ function crd(text: string): Mol {
       break;
     }
   }
-  const structure = reader.finish();
-  console.timeEnd('crd');
-  return structure;
+  return reader.finish();
 }
 
 interface CifOptions {
@@ -887,8 +876,6 @@ class CIFReader {
     this._assignSecondaryStructure(structure);
     this._assignAssemblies(structure);
     structure.deriveConnectivity();
-    console.log('imported', structure.chains().length, 'chain(s),',
-                structure.residueCount(), 'residue(s)');
     return structure;
   }
 
@@ -967,12 +954,9 @@ class CIFReader {
 // (label_asym_id/label_seq_id/label_atom_id/label_comp_id) to build chains/
 // residues/atoms, not auth_* -- see src/cif.ts for the underlying tokenizer.
 function cif(text: string, options?: CifOptions): Mol | (Mol | null)[] | undefined {
-  console.time('cif');
   const doc = parseCIF(text);
   const reader = new CIFReader(doc, options || {});
-  const result = reader.read();
-  console.timeEnd('cif');
-  return result;
+  return reader.read();
 }
 
 

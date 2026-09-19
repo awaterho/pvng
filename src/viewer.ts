@@ -1570,7 +1570,6 @@ class Viewer {
         return this._objects[i] as unknown as BaseGeom;
       }
     }
-    console.error('could not find object with name', name);
     return null;
   }
 

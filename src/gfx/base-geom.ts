@@ -364,32 +364,26 @@ utils.derive(BaseGeom, SceneNode, {
   },
 
   colorBy: function(this: BaseGeom, colorFunc: never, view?: unknown) {
-    console.time('BaseGeom.colorBy');
     this._ready = false;
     view = view || this.structure();
     for (let i = 0; i < this._vertAssocs.length; ++i) {
       (this._vertAssocs[i] as AtomVertexAssoc).recolor(colorFunc, view as never);
     }
-    console.timeEnd('BaseGeom.colorBy');
   },
 
   setOpacity: function(this: BaseGeom, val: number, view?: unknown) {
-    console.time('BaseGeom.setOpacity');
     this._ready = false;
     view = view || this.structure();
     for (let i = 0; i < this._vertAssocs.length; ++i) {
       (this._vertAssocs[i] as AtomVertexAssoc).setOpacity(val, view as never);
     }
-    console.timeEnd('BaseGeom.setOpacity');
   },
   setSelection: function(this: BaseGeom, view: unknown) {
-    console.time('BaseGeom.setSelection');
     this._selection = view;
     this._ready = false;
     for (let i = 0; i < this._vertAssocs.length; ++i) {
       (this._vertAssocs[i] as AtomVertexAssoc).setSelection(view as never);
     }
-    console.timeEnd('BaseGeom.setSelection');
   },
   selection: function(this: BaseGeom) {
     if (this._selection === null) {

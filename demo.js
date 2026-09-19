@@ -276,7 +276,6 @@ function getFromRcsb(pdbId) {
     return;
   }
   var url = 'https://files.rcsb.org/download/' + pdbId + '.cif';
-  console.log(url)
   io.fetchCif(url, function(s) {
     structure = s;
     cartoon();
@@ -316,7 +315,6 @@ window.viewer = viewer;
 viewer.addListener('viewerReady', transferase);
 
 viewer.on('doubleClick', function(picked) {
-  console.log(picked.connectivity());
   if (picked === null) {
     viewer.fitTo(structure);
     return;
