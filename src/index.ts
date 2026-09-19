@@ -25,12 +25,14 @@ import mol from './mol/all';
 import color from './color';
 import viewpoint from './viewpoint';
 import traj from './traj';
+import mvs from './mvs';
 
 // export
 export default {
     Viewer : viewer.Viewer,
     isWebGLSupported : viewer.isWebGLSupported,
     io : io,
+    mvs : mvs,
     traj : traj,
     color : color,
     mol : mol,

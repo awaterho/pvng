@@ -44,7 +44,7 @@ interface StructureView {
   addChain(chain: SelectChain, withResidues?: boolean): ChainView;
 }
 
-interface SelectDict {
+export interface SelectDict {
   aname?: string;
   anames?: string[];
   hetatm?: boolean;
