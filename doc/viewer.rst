@@ -4,6 +4,10 @@ The Viewer
 
 The 3D molecules are managed and rendered by an instance of the viewer class. It serves as the main entry point for the protein viewer and is where most of the action happens. In the following, the full API of :class:`~pv.Viewer` is described. The methods are roughly categorized into the following sections:
 
+.. note::
+
+  The viewer requires a WebGL2-capable browser; there is no WebGL1 fallback. Transparent geometry (see :func:`~pv.BaseGeom.setOpacity` in :doc:`scene`) is rendered with weighted blended order-independent transparency, so overlapping transparent surfaces composite correctly regardless of draw order.
+
  * :ref:`pv.viewer.init`
  * :ref:`pv.viewer.rendering`
  * :ref:`pv.viewer.camera`

@@ -9,7 +9,7 @@ Tightly coupled to :class:`pv.mol.Mol` is the concept of structural subset, a :c
 Obtaining and Creating Molecular Structures
 -----------------------------------------------------------------------------------------
 
-The most common way to construct :class:`molecules <pv.mol.Mol>` is through one of the io functions. For example, to import the structure from a PDB file, use :func:`pv.io.pdb`. The whole structure, or a subset thereof can then be displayed on the screen by using one of the :ref:`rendering functions<pv.viewer.rendering>`.
+The most common way to construct :class:`molecules <pv.mol.Mol>` is through one of the io functions. For example, to import the structure from a PDB file, use :func:`pv.io.pdb`, or from an mmCIF file, use :func:`pv.io.cif`. The whole structure, or a subset thereof can then be displayed on the screen by using one of the :ref:`rendering functions<pv.viewer.rendering>`.
 
 The following code example fetches a PDB file from PDB.org imports it and displays the chain with name 'A' on the screen. For more details on how to create subsets, see :ref:`pv.mol.creating-views`.
 
@@ -74,10 +74,17 @@ The following record types are handled:
   * connectivity information
   * the chain name is set to the structure title
 
+.. function:: pv.io.cif(cifData[, options])
+
+  Loads a structure from *cifData*, a string containing an mmCIF/CIF file, and returns it. Accepts the same *options* as :func:`pv.io.pdb`, including ``loadAllModels``. Chains and residues are built from mmCIF's ``label_asym_id``/``label_seq_id``/``label_atom_id``/``label_comp_id`` identifiers (the internal, stable numbering scheme), not the ``auth_*`` ones used for classic-PDB-compatible numbering.
+
+  The same information is extracted as for :func:`pv.io.pdb`: coordinate data, secondary structure, and biological assembly information (including composed/multiplied symmetry operators).
+
 .. function:: pv.io.fetchPdb(url, callback[, options])
               pv.io.fetchSdf(url, callback)
+              pv.io.fetchCif(url, callback[, options])
 
-  Performs an adjax request the provided URL and loads the data as a structure using either :func:`pv.io.pdb`, or :func:`pv.io.sdf`. Upon success, the callback is invoked with the loaded structure as the only argument. *options* is passed as-is to :func:`pv.io.pdb`.
+  Performs an adjax request the provided URL and loads the data as a structure using :func:`pv.io.pdb`, :func:`pv.io.sdf`, or :func:`pv.io.cif` respectively. Upon success, the callback is invoked with the loaded structure as the only argument. *options* is passed as-is to :func:`pv.io.pdb`/:func:`pv.io.cif`.
 
 
 Mol (and MolView)
@@ -85,7 +92,7 @@ Mol (and MolView)
 
 .. class:: pv.mol.Mol()
 
-  Represents a complete molecular structure which may consist of multiple polypeptide chains, solvent and other molecules.  Instances of mol are typically created through one of the io functions, e.g. :func:`pv.io.pdb`, or :func:`pv.io.sdf`.
+  Represents a complete molecular structure which may consist of multiple polypeptide chains, solvent and other molecules.  Instances of mol are typically created through one of the io functions, e.g. :func:`pv.io.pdb`, :func:`pv.io.cif`, or :func:`pv.io.sdf`.
 
 .. class:: pv.mol.MolView()
 

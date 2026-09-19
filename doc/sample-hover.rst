@@ -5,10 +5,7 @@ This sample shows how to highlight the atom under the mouse cursor by changing i
 
 .. note::
 
-  While it's possible to temporarily change the color for highlighting purposes, it's recommended to use the :func:`selection highlighting functionality <pv.BaseGeom.setSelection>` added in in PV 1.8.0 instead.
-
-This sample requires PV 1.7.0 and higher to work as it relies on functionality that was added in 1.7.0.
-
+  While it's possible to temporarily change the color for highlighting purposes, it's recommended to use the :func:`selection highlighting functionality <pv.BaseGeom.setSelection>` instead. See :doc:`sample-select` for an example.
 
 .. pv-sample::
 

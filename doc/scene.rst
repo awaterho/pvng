@@ -21,6 +21,8 @@ The displaying of molecules is handled by :class:`pv.BaseGeom`, and subclasses. 
 
   :param alpha: The new opacity in the range between 0 and 1.
 
+  Transparent geometry is composited using weighted blended order-independent transparency, so overlapping transparent objects (including billboarded spheres) render correctly without needing to be sorted back-to-front.
+
 .. function:: pv.BaseGeom.colorBy(colorOp)
               pv.BaseGeom.colorBy(colorOp, view)
 

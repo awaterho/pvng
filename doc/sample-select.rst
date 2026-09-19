@@ -2,7 +2,7 @@ Select atoms/residues using mouse and keyboard
 =======================================================
 
 
-This sample demonstrates how to select residues with mouse an keyboard by using the selection highlighting introduced in PV 1.8 to visually highlight a subset of residues and atoms. 
+This sample demonstrates how to select residues with mouse an keyboard by using the selection highlighting functionality to visually highlight a subset of residues and atoms.
 
 
 Usage
