@@ -47,16 +47,13 @@ Then start the Vite dev server:
 npm run dev
 ```
 
-This opens `dev.html`, which loads the viewer directly from TypeScript source. `demo.html`
-exercises the built `dist/` bundle instead and is a closer approximation of how a consuming
-website would use the library.
+This opens `index.html`, which loads the viewer directly from TypeScript source. 
+
 
 Using pvng on your website
 ----------------------------------------
 
-`pvng` isn't published to npm yet (`bio-pv` on the registry is still the original, unmaintained
-`pv` package, not this fork). In the meantime, build it yourself and copy the bundle into your
-site:
+Build the single js file you need to run PV in your website:
 
 ```bash
 git clone https://github.com/awaterho/pvng.git
@@ -93,7 +90,7 @@ Development
 ----------------------------------------
 
 ```bash
-npm run dev         # start the Vite dev server (dev.html)
+npm run dev         # start the Vite dev server (index.html)
 npm run build        # produce dist/pv.{js,cjs,iife.js} + type declarations
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint .

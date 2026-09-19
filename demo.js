@@ -1,7 +1,6 @@
 var viewer;
 
-// demo.html (distribution example) loads dist/pv.iife.js first, which
-// defines the global `pv`. index.html (dev) doesn't build/load that
+// index.html (dev) doesn't build/load dist/pv.iife.js
 // bundle, so fall back to importing the TypeScript source directly --
 // this only works when served through the Vite dev server, which
 // transpiles it on the fly.
