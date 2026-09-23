@@ -1,4 +1,4 @@
-# Generated for the pv demo from pdbs/4C46.pdb (already part of this
+# Generated for the pv demo.
 # repository) to exercise io.cif()/io.fetchCif() without a network fetch.
 data_4C46
 loop_

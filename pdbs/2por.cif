@@ -1,4 +1,4 @@
-# Generated for the pv demo from pdbs/2por.pdb (already part of this
+# Generated for the pv demo.
 # repository) to exercise io.cif()/io.fetchCif() without a network fetch.
 data_2POR
 loop_
