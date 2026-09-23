@@ -204,8 +204,10 @@ export interface CIFDocument {
   // returns the single value associated with `_category.item`, or
   // undefined if no such key-value pair (or loop column) exists.
   getValue(category: string, item: string): string | undefined;
-  // returns every row of the `_category.*` loop, or an empty array if that
-  // category has no loop in the document.
+  // returns every row of the `_category.*` table, or an empty array if the
+  // document has no such category. A category written as key-value pairs
+  // rather than a loop is a table with a single row (mmCIF does this e.g. for
+  // entries with only one assembly or one helix).
   loopRows(category: string): CIFRow[];
 }
 
@@ -213,6 +215,8 @@ export function parseCIF(text: string): CIFDocument {
   const tokens = tokenize(text);
   const loops = new Map<string, Loop>();
   const values = new Map<string, string>();
+  // key-value pairs grouped by category, exposed as single row tables
+  const pairs = new Map<string, { columns: string[]; row: string[] }>();
 
   let i = 0;
   const n = tokens.length;
@@ -254,6 +258,13 @@ export function parseCIF(text: string): CIFDocument {
       i++;
       if (i < n && tokens[i]!.type === 'value') {
         values.set(category + '.' + item, tokens[i]!.text);
+        let entry = pairs.get(category);
+        if (entry === undefined) {
+          entry = { columns: [], row: [] };
+          pairs.set(category, entry);
+        }
+        entry.columns.push(item);
+        entry.row.push(tokens[i]!.text);
         i++;
       }
       continue;
@@ -261,6 +272,12 @@ export function parseCIF(text: string): CIFDocument {
     // stray value token outside of a loop/tag context: skip it.
     i++;
   }
+
+  pairs.forEach(function(entry, category) {
+    if (!loops.has(category)) {
+      loops.set(category, new Loop(entry.columns, [entry.row]));
+    }
+  });
 
   return {
     getValue(category: string, item: string): string | undefined {

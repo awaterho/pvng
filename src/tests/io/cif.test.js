@@ -192,6 +192,56 @@ test('expands a parenthesized-product oper_expression via matrix composition', f
   assert.mat4Equal(gen.matrix(0), expected);
 });
 
+// categories with a single row are commonly written as key-value pairs
+// instead of a loop, e.g. for entries with one assembly or one helix.
+var KEY_VALUE_CIF = [
+  'loop_',
+  '_atom_site.group_PDB',
+  '_atom_site.id',
+  '_atom_site.type_symbol',
+  '_atom_site.label_atom_id',
+  '_atom_site.label_comp_id',
+  '_atom_site.label_asym_id',
+  '_atom_site.label_seq_id',
+  '_atom_site.Cartn_x',
+  '_atom_site.Cartn_y',
+  '_atom_site.Cartn_z',
+  'ATOM  1 C CA THR A 1 0.0 0.0 0.0',
+  'ATOM  2 C CA THR A 2 1.0 0.0 0.0',
+  'ATOM  3 C CA THR A 3 2.0 0.0 0.0',
+  '_struct_conf.conf_type_id      HELX_P',
+  '_struct_conf.beg_label_asym_id A',
+  '_struct_conf.beg_label_seq_id  1',
+  '_struct_conf.end_label_asym_id A',
+  '_struct_conf.end_label_seq_id  3',
+  '_pdbx_struct_oper_list.id          1',
+  '_pdbx_struct_oper_list.matrix[1][1] 1',
+  '_pdbx_struct_oper_list.matrix[1][2] 0',
+  '_pdbx_struct_oper_list.matrix[1][3] 0',
+  '_pdbx_struct_oper_list.matrix[2][1] 0',
+  '_pdbx_struct_oper_list.matrix[2][2] 1',
+  '_pdbx_struct_oper_list.matrix[2][3] 0',
+  '_pdbx_struct_oper_list.matrix[3][1] 0',
+  '_pdbx_struct_oper_list.matrix[3][2] 0',
+  '_pdbx_struct_oper_list.matrix[3][3] 1',
+  '_pdbx_struct_oper_list.vector[1]   5',
+  '_pdbx_struct_oper_list.vector[2]   0',
+  '_pdbx_struct_oper_list.vector[3]   0',
+  '_pdbx_struct_assembly_gen.assembly_id     1',
+  '_pdbx_struct_assembly_gen.oper_expression 1',
+  '_pdbx_struct_assembly_gen.asym_id_list    A',
+].join('\n');
+
+test('reads categories written as key-value pairs as single row tables', function(assert) {
+  var structure = io.cif(KEY_VALUE_CIF);
+  strictEqual(structure.chain('A').residueByRnum(2).ss(), 'H');
+  var assembly = structure.assembly('1');
+  assert.ok(!!assembly);
+  deepEqual(assembly.generator(0).chains(), ['A']);
+  assert.mat4Equal(assembly.generator(0).matrix(0),
+                   mat4.fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 5,0,0,1));
+});
+
 test('returns undefined for a document with no _atom_site loop', function(assert) {
   var structure = io.cif('_entry.id 1CRN\n');
   strictEqual(structure, undefined);
