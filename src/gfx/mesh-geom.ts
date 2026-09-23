@@ -105,8 +105,10 @@ const MeshGeom = function(
 } as unknown as MeshGeomConstructor;
 
 utils.derive(MeshGeom, BaseGeom, {
+  // vertex arrays are drawn with 16 bit indices. WebGL2 always treats index
+  // 0xFFFF as primitive restart, so only 65535 vertices are addressable.
   _boundedVertArraySize: function(this: MeshGeom, size: number) {
-    return Math.min(65536, size);
+    return Math.min(65535, size);
   },
 
   addChainVertArray: function(this: MeshGeom, chain: MGChain, numVerts: number, numIndices: number) {

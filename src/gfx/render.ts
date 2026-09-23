@@ -739,7 +739,7 @@ const _cartoonNumVerts = function(traces: RenderTrace[], vertsPerSlice: number, 
     // in case there are more than 2^16 vertices for a single trace, we
     // need to manually split the trace in two and duplicate one of the
     // trace slices. Let's make room for some additional space...
-    const splits = Math.ceil((traceVerts + 2)/65536);
+    const splits = Math.ceil((traceVerts + 2)/65535);
     numVerts += traceVerts + (splits - 1) * vertsPerSlice;
     // triangles for capping the tube
     numVerts += 2;
@@ -807,7 +807,7 @@ const _addNucleotideSticks = (function() {
         opts.protoSphere.addTransformed(va as never, startAtom.pos(), radius,
                                         color, objId);
         const vertEnd = va.numVerts();
-        console.assert(vertEnd <= 65536, 'too many vertices');
+        console.assert(vertEnd <= 65535, 'too many vertices');
         vertAssoc.addAssoc(endAtom as never, va as never, vertStart, vertEnd);
       }
     }
