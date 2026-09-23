@@ -375,7 +375,6 @@ function getFromRcsb(pdbId) {
 
 document.getElementById('load-from-pdb').addEventListener('change', function() {
   var pdbId = this.value;
-  this.value = '';
   this.blur();
   getFromRcsb(pdbId);
 });
