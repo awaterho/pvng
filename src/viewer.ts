@@ -33,7 +33,9 @@ import MouseHandler from './mouse';
 import renderModuleRaw from './gfx/render';
 import type { RenderStructure, RenderOptions, RenderAtom } from './gfx/render';
 import SurfaceWorker from './surface/worker?worker&inline';
-import type { SurfaceMesh, SurfaceParams, SurfaceType } from './surface/compute';
+import {
+  planSurface, type SurfaceChunk, type SurfaceMesh, type SurfaceParams, type SurfaceType,
+} from './surface/compute';
 import TextLabel, { type TextLabel as ITextLabel, type TextLabelOptions } from './gfx/label';
 import CustomMeshCtor, { type CustomMesh } from './gfx/custom-mesh';
 import anim from './gfx/animation';
@@ -1274,31 +1276,60 @@ class Viewer {
       gridSpacing: (options.gridSpacing as number | undefined) || 0.5,
     };
     const { atoms, data } = render.surfaceAtoms(structure);
+    // the grid is cut into slabs that a pool of workers, one per core,
+    // computes in parallel
+    const numWorkers = Math.max(1, navigator.hardwareConcurrency || 4);
+    const plan = planSurface(data, params, numWorkers);
     return new Promise((resolve, reject) => {
-      const worker = new SurfaceWorker();
+      const results: SurfaceChunk[][] = [];
+      const workers: Worker[] = [];
+      let nextSlab = 0, slabsDone = 0;
+      const stop = () => {
+        workers.forEach((worker) => worker.terminate());
+        this._pendingSurfaces = this._pendingSurfaces.filter((p) => p !== pending);
+      };
       const pending = {
         name,
         cancel: () => {
-          worker.terminate();
+          stop();
           resolve(null);
         },
       };
-      const finish = () => {
-        worker.terminate();
-        this._pendingSurfaces = this._pendingSurfaces.filter((p) => p !== pending);
-      };
-      worker.onmessage = (event: MessageEvent<SurfaceMesh>) => {
-        finish();
-        const obj = render.surface(event.data, atoms, structure, this._canvas!.gl(),
+      const complete = () => {
+        stop();
+        const mesh = { chunks: results.flat(), gridSpacing: plan.grid.spacing };
+        const obj = render.surface(mesh, atoms, structure, this._canvas!.gl(),
                                    options as unknown as RenderOptions);
         resolve(this.add(name, obj));
       };
-      worker.onerror = (event) => {
-        finish();
-        reject(new Error('surface computation failed: ' + event.message));
+      const dispatch = (worker: Worker) => {
+        const slab = nextSlab++;
+        if (slab >= plan.slabs.length) return;
+        const [z0, z1] = plan.slabs[slab]!;
+        worker.onmessage = (event: MessageEvent<SurfaceChunk[]>) => {
+          results[slab] = event.data;
+          if (++slabsDone === plan.slabs.length) {
+            complete();
+          } else {
+            dispatch(worker);
+          }
+        };
+        worker.postMessage({ atoms: data, params, grid: plan.grid, z0, z1 });
       };
       this._pendingSurfaces.push(pending);
-      worker.postMessage({ atoms: data, params }, [data.buffer]);
+      if (plan.slabs.length === 0) {
+        complete();
+        return;
+      }
+      for (let i = 0; i < Math.min(numWorkers, plan.slabs.length); ++i) {
+        const worker = new SurfaceWorker();
+        worker.onerror = (event) => {
+          stop();
+          reject(new Error('surface computation failed: ' + event.message));
+        };
+        workers.push(worker);
+        dispatch(worker);
+      }
     });
   }
 

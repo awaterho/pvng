@@ -1,5 +1,5 @@
 import { test } from './helpers';
-import { computeSurface } from '../surface/compute';
+import { computeSurface, computeSurfaceSlab, planSurface } from '../surface/compute';
 
 function atomData(atoms) {
   var data = new Float32Array(atoms.length * 4);
@@ -123,6 +123,48 @@ test("large meshes are split into chunks with 16 bit indices", function(assert) 
     for (var i = 0; i < chunk.indices.length; ++i) assert.ok(chunk.indices[i] < numVerts);
     // vertices are grouped by atom
     for (var v = 1; v < numVerts; ++v) assert.ok(chunk.atoms[v - 1] <= chunk.atoms[v]);
+  });
+});
+
+test("surfaces computed in slabs match the unsplit surface without cracks",
+     function(assert) {
+  var atoms = [];
+  for (var i = 0; i < 30; ++i) {
+    atoms.push([Math.cos(i * 0.9) * 5, Math.sin(i * 0.9) * 5, i * 0.6, 1.7]);
+  }
+  var data = atomData(atoms);
+  var p = params('ses');
+  var whole = computeSurface(data, p);
+  var plan = planSurface(data, p, 5);
+  assert.strictEqual(plan.slabs.length, 5);
+  var chunks = [];
+  plan.slabs.forEach(function(slab) {
+    chunks = chunks.concat(computeSurfaceSlab(data, p, plan.grid, slab[0], slab[1]));
+  });
+  // weld vertices by position; slabs duplicate the ones on their seams
+  var key = function(c, v) {
+    return Array.prototype.map.call(c.positions.subarray(v * 3, v * 3 + 3),
+                                    function(x) { return x.toFixed(5); }).join(',');
+  };
+  var edges = function(chunkList) {
+    var directed = new Map(), triangles = 0;
+    chunkList.forEach(function(c) {
+      for (var t = 0; t < c.indices.length; t += 3, ++triangles) {
+        for (var e = 0; e < 3; ++e) {
+          var k = key(c, c.indices[t + e]) + '>' + key(c, c.indices[t + (e + 1) % 3]);
+          directed.set(k, (directed.get(k) || 0) + 1);
+        }
+      }
+    });
+    return { directed: directed, triangles: triangles };
+  };
+  var a = edges(whole.chunks), b = edges(chunks);
+  assert.strictEqual(b.triangles, a.triangles);
+  assert.strictEqual(b.directed.size, a.directed.size);
+  b.directed.forEach(function(count, k) {
+    assert.strictEqual(a.directed.get(k), count);
+    var ends = k.split('>');
+    assert.ok(b.directed.has(ends[1] + '>' + ends[0]));
   });
 });
 

@@ -1,20 +1,25 @@
-// Web worker that computes molecular surfaces off the main thread. Receives
-// the atoms (x, y, z, van der Waals radius) and surface parameters, replies
-// with the mesh chunks, transferring their buffers.
+// Web worker that computes one slab of a molecular surface off the main
+// thread (see planSurface). Receives the atoms (x, y, z, van der Waals
+// radius), surface parameters, the grid and the slab's cell layers, and
+// replies with the slab's mesh chunks, transferring their buffers.
 
-import { computeSurface, type SurfaceParams } from './compute';
+import { computeSurfaceSlab, type GridShape, type SurfaceParams } from './compute';
 
-export interface SurfaceRequest {
+export interface SurfaceSlabRequest {
   atoms: Float32Array;
   params: SurfaceParams;
+  grid: GridShape;
+  z0: number;
+  z1: number;
 }
 
-self.onmessage = (event: MessageEvent<SurfaceRequest>) => {
-  const mesh = computeSurface(event.data.atoms, event.data.params);
+self.onmessage = (event: MessageEvent<SurfaceSlabRequest>) => {
+  const { atoms, params, grid, z0, z1 } = event.data;
+  const chunks = computeSurfaceSlab(atoms, params, grid, z0, z1);
   const transfer: Transferable[] = [];
-  for (const chunk of mesh.chunks) {
+  for (const chunk of chunks) {
     transfer.push(chunk.positions.buffer, chunk.normals.buffer, chunk.atoms.buffer,
                   chunk.indices.buffer);
   }
-  (self as unknown as Worker).postMessage(mesh, transfer);
+  (self as unknown as Worker).postMessage(chunks, transfer);
 };

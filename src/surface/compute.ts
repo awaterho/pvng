@@ -37,6 +37,9 @@ export interface SurfaceParams {
   // of grid points below maxGridPoints.
   gridSpacing: number;
   maxGridPoints?: number;
+  // upper bound for the number of grid points one slab of the grid covers
+  // (see planSurface), which bounds the memory a worker needs.
+  maxSlabPoints?: number;
   // upper bound for the number of vertices per chunk. Chunks are indexed with
   // 16 bit indices, and WebGL2 reserves 0xFFFF as the primitive restart
   // index, so this must not exceed 65535.
@@ -60,7 +63,9 @@ export interface SurfaceMesh {
   gridSpacing: number;
 }
 
-const DEFAULT_MAX_GRID_POINTS = 8000000;
+// about 12 bytes per grid point are needed while a slab is computed
+const DEFAULT_MAX_GRID_POINTS = 32000000;
+const DEFAULT_MAX_SLAB_POINTS = 2000000;
 const DEFAULT_MAX_CHUNK_VERTS = 65535;
 
 // Bins points into cubic cells for fixed radius neighbour queries. Points
@@ -156,9 +161,11 @@ function unitSpherePoints(n: number): Float32Array {
 }
 
 // Points on the parts of the SAS spheres (centres, radii) not buried inside
-// another SAS sphere, at a spacing of roughly `spacing`.
+// another SAS sphere, at a spacing of roughly `spacing`. Only dots with a z
+// coordinate in [zmin, zmax] are generated.
 function accessibleDots(centers: Float32Array, radii: Float32Array, atomCells: CellGrid,
-                        maxRadius: number, spacing: number): { coords: Float32Array; count: number } {
+                        maxRadius: number, spacing: number,
+                        zmin: number, zmax: number): { coords: Float32Array; count: number } {
   const count = radii.length;
   const templates = new Map<number, Float32Array>();
   let coords = new Float32Array(1024 * 3);
@@ -167,6 +174,7 @@ function accessibleDots(centers: Float32Array, radii: Float32Array, atomCells: C
   for (let i = 0; i < count; ++i) {
     const ax = centers[i * 3]!, ay = centers[i * 3 + 1]!, az = centers[i * 3 + 2]!;
     const ri = radii[i]!;
+    if (az + ri < zmin || az - ri > zmax) continue;
     neighbours.length = 0;
     atomCells.forEachNear(ax, ay, az, ri + maxRadius, (j) => {
       if (j === i) return;
@@ -184,10 +192,12 @@ function accessibleDots(centers: Float32Array, radii: Float32Array, atomCells: C
     // first.
     let lastBuriedBy = 0;
     for (let k = 0; k < n; ++k) {
-      const x = ax + unit[k * 3]! * ri, y = ay + unit[k * 3 + 1]! * ri, z = az + unit[k * 3 + 2]! * ri;
+      const z = az + unit[k * 3 + 1]! * ri;
+      if (z < zmin || z > zmax) continue;
+      const x = ax + unit[k * 3]! * ri, y = ay + unit[k * 3 + 2]! * ri;
       let buried = false;
-      for (let m = 0; m < neighbours.length; ++m) {
-        const idx = (m + lastBuriedBy) % neighbours.length;
+      for (let m = 0, idx = lastBuriedBy; m < neighbours.length; ++m, ++idx) {
+        if (idx === neighbours.length) idx = 0;
         const j = neighbours[idx]!;
         const dx = x - centers[j * 3]!, dy = y - centers[j * 3 + 1]!, dz = z - centers[j * 3 + 2]!;
         const rj = radii[j]!;
@@ -212,7 +222,9 @@ function accessibleDots(centers: Float32Array, radii: Float32Array, atomCells: C
   return { coords, count: numDots };
 }
 
-interface GridShape {
+// A regular grid of sample points: point (x, y, z) sits at
+// origin + spacing * (x, y, z) and has index x + nx * (y + ny * z).
+export interface GridShape {
   origin: [number, number, number];
   spacing: number;
   nx: number;
@@ -222,6 +234,45 @@ interface GridShape {
 
 interface Grid extends GridShape {
   values: Float32Array;
+  // for every grid point, the atom with the closest van der Waals surface,
+  // or -1 for points far outside all atoms.
+  owner: Int32Array;
+}
+
+// How a surface is split into independent pieces of work: one grid for the
+// whole structure, cut into slabs of whole cell layers along z. Slab
+// [z0, z1) covers the cells between grid layers z0 and z1.
+export interface SurfacePlan {
+  grid: GridShape;
+  slabs: [number, number][];
+}
+
+interface PreparedAtoms {
+  count: number;
+  centers: Float32Array;
+  vdwRadii: Float32Array;
+  // radii of the spheres whose union is sampled: van der Waals radii, plus
+  // the probe radius for 'sas' and 'ses'.
+  radii: Float32Array;
+  maxRadius: number;
+}
+
+function prepareAtoms(atoms: Float32Array, params: SurfaceParams): PreparedAtoms {
+  const count = atoms.length / 4;
+  const centers = new Float32Array(count * 3);
+  const vdwRadii = new Float32Array(count);
+  const radii = new Float32Array(count);
+  const inflate = params.type === 'vdw' ? 0 : params.probeRadius;
+  let maxRadius = 0;
+  for (let i = 0; i < count; ++i) {
+    centers[i * 3] = atoms[i * 4]!;
+    centers[i * 3 + 1] = atoms[i * 4 + 1]!;
+    centers[i * 3 + 2] = atoms[i * 4 + 2]!;
+    vdwRadii[i] = atoms[i * 4 + 3]!;
+    radii[i] = vdwRadii[i]! + inflate;
+    maxRadius = Math.max(maxRadius, radii[i]!);
+  }
+  return { count, centers, vdwRadii, radii, maxRadius };
 }
 
 // Calls row(idx, count, dx0, dyz2) for every row of grid points inside the
@@ -249,34 +300,20 @@ function forEachBallRow(grid: GridShape, cx: number, cy: number, cz: number, r: 
   }
 }
 
-// Samples the surface field (see top of file) on a grid covering all SAS
-// spheres.
-function sampleField(centers: Float32Array, radii: Float32Array, atomCells: CellGrid,
-                     maxRadius: number, params: SurfaceParams): Grid {
-  const count = radii.length;
+// Samples the surface field (see top of file) on the given grid, which may
+// be a part of the whole structure's grid.
+function sampleField(atoms: PreparedAtoms, atomCells: CellGrid, shape: GridShape,
+                     params: SurfaceParams): Grid {
+  const { count, centers, radii } = atoms;
   const probe = params.type === 'ses' ? params.probeRadius : 0;
-  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-  for (let i = 0; i < count; ++i) {
-    for (let k = 0; k < 3; ++k) {
-      lo[k] = Math.min(lo[k]!, centers[i * 3 + k]! - radii[i]!);
-      hi[k] = Math.max(hi[k]!, centers[i * 3 + k]! + radii[i]!);
-    }
-  }
-  const maxPoints = params.maxGridPoints || DEFAULT_MAX_GRID_POINTS;
-  let h = params.gridSpacing;
-  const extent = [0, 1, 2].map((k) => hi[k]! - lo[k]!);
-  const pointsFor = (s: number) =>
-    extent.reduce((p, e) => p * (Math.ceil(e / s) + 5), 1);
-  while (pointsFor(h) > maxPoints) h *= 1.05;
-  const pad = 2 * h;
-  const origin: [number, number, number] = [lo[0]! - pad, lo[1]! - pad, lo[2]! - pad];
-  const nx = Math.ceil(extent[0]! / h) + 5, ny = Math.ceil(extent[1]! / h) + 5,
-      nz = Math.ceil(extent[2]! / h) + 5;
-  const shape: GridShape = { origin, spacing: h, nx, ny, nz };
-  const values = new Float32Array(nx * ny * nz);
+  const h = shape.spacing;
+  const values = new Float32Array(shape.nx * shape.ny * shape.nz);
+  const owner = new Int32Array(values.length).fill(-1);
 
   // g(x) = min |x - a_i| - R_i, evaluated exactly within `band` of the
   // spheres and clamped to `band` further out, where only the sign matters.
+  // All R_i exceed the van der Waals radii by the same amount, so the atom
+  // attaining the minimum is also the one with the closest vdW surface.
   const band = 2 * h;
   values.fill(band);
   for (let i = 0; i < count; ++i) {
@@ -285,12 +322,15 @@ function sampleField(centers: Float32Array, radii: Float32Array, atomCells: Cell
                    (idx, n, dx, dyz2) => {
       for (let end = idx + n; idx < end; ++idx, dx += h) {
         const d = Math.sqrt(dx * dx + dyz2) - R;
-        if (d < values[idx]!) values[idx] = d;
+        if (d < values[idx]!) {
+          values[idx] = d;
+          owner[idx] = i;
+        }
       }
     });
   }
   if (probe === 0) {
-    return { ...shape, values };
+    return { ...shape, values, owner };
   }
 
   // SES: replace the SAS field by probe - D(x). Outside the SAS, D = -g.
@@ -299,9 +339,13 @@ function sampleField(centers: Float32Array, radii: Float32Array, atomCells: Cell
   // within 2h of the SES are used for vertices and normals, so the search
   // stops at probe + 2h and points further inside get clamped. Since
   // D >= -g inside the SAS, points with -g >= reach are known to be clamped.
-  const dotSpacing = Math.min(h, 0.5);
-  const dots = accessibleDots(centers, radii, atomCells, maxRadius, dotSpacing);
+  // The dot spacing follows the grid: the error it causes, roughly
+  // (0.6 spacing)^2 / (2 probe), stays below the grid's own.
+  const dotSpacing = Math.min(h, 0.6 * probe);
   const reach = probe + 2 * h, reach2 = reach * reach;
+  const zmin = shape.origin[2], zmax = zmin + (shape.nz - 1) * h;
+  const dots = accessibleDots(centers, radii, atomCells, atoms.maxRadius, dotSpacing,
+                              zmin - reach, zmax + reach);
   const dist2 = new Float32Array(values.length).fill(reach2);
   const dotCoords = dots.coords;
   for (let i = 0; i < dots.count; ++i) {
@@ -317,7 +361,7 @@ function sampleField(centers: Float32Array, radii: Float32Array, atomCells: Cell
     const g = values[idx]!;
     values[idx] = g > 0 || -g >= reach ? probe + g : probe - Math.sqrt(dist2[idx]!);
   }
-  return { ...shape, values };
+  return { ...shape, values, owner };
 }
 
 const CORNERS = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
@@ -329,12 +373,15 @@ interface RawMesh {
   positions: number[];
   normals: number[];
   triangles: number[];
+  // per vertex, the owner of the grid point closer to it (-1 if unknown)
+  owner: number[];
 }
 
-// Marching cubes over the zero level of grid.values. Vertices are shared
-// between neighbouring cells (keyed by the grid edge they lie on) and
-// normals come from the field gradient, so the mesh is smooth and closed.
-function triangulate(grid: Grid): RawMesh {
+// Marching cubes over the zero level of grid.values, for the cells between
+// grid layers z0 and z1. Vertices are shared between neighbouring cells
+// (keyed by the grid edge they lie on) and normals come from the field
+// gradient, so the mesh is smooth and closed.
+function triangulate(grid: Grid, z0: number, z1: number): RawMesh {
   const { nx, ny, nz, values, origin, spacing: h } = grid;
   const strides = [1, nx, nx * ny];
   // per cube edge: corner offset of its lower end within the cell, and the
@@ -346,6 +393,7 @@ function triangulate(grid: Grid): RawMesh {
   const cornerOffset = CORNERS.map((c) => c[0]! + nx * (c[1]! + ny * c[2]!));
 
   const positions: number[] = [], normals: number[] = [], triangles: number[] = [];
+  const owner: number[] = [];
   // vertex ids on the edges starting at grid layers z and z + 1, which are
   // all the edges the cells of layer z can touch. Indexed by layer parity.
   const layerSize = nx * ny * 3;
@@ -380,12 +428,15 @@ function triangulate(grid: Grid): RawMesh {
       positions.push(origin[k]! + (p[k]! + (k === axis ? t : 0)) * h);
       normals.push(n[k]! / len);
     }
+    const near = grid.owner[t < 0.5 ? idx : idx + strides[axis]!]!;
+    owner.push(near >= 0 ? near : grid.owner[t < 0.5 ? idx + strides[axis]! : idx]!);
     const index = positions.length / 3 - 1;
     layer[key] = index;
     return index;
   };
 
-  for (let z = 0; z < nz - 1; ++z) {
+  edgeVerts[z0 & 1]!.fill(-1);
+  for (let z = z0; z < z1; ++z) {
     edgeVerts[(z + 1) & 1]!.fill(-1);
     for (let y = 0; y < ny - 1; ++y) {
       let idx = nx * (y + ny * z);
@@ -409,18 +460,20 @@ function triangulate(grid: Grid): RawMesh {
       }
     }
   }
-  return { positions, normals, triangles };
+  return { positions, normals, triangles, owner };
 }
 
-// For every vertex, the atom with the closest van der Waals surface.
-function assignAtoms(mesh: RawMesh, centers: Float32Array, vdwRadii: Float32Array,
-                     atomCells: CellGrid, searchRadius: number): Int32Array {
-  const numVerts = mesh.positions.length / 3;
-  const owner = new Int32Array(numVerts);
+// Assigns vertices whose grid points had no owner to the atom with the
+// closest van der Waals surface. Rarely needed.
+function assignMissingOwners(mesh: RawMesh, atoms: PreparedAtoms, atomCells: CellGrid,
+                             searchRadius: number): Int32Array {
+  const { centers, vdwRadii } = atoms;
+  const owner = Int32Array.from(mesh.owner);
   const pos = mesh.positions;
-  for (let v = 0; v < numVerts; ++v) {
+  for (let v = 0; v < owner.length; ++v) {
+    if (owner[v]! >= 0) continue;
     const x = pos[v * 3]!, y = pos[v * 3 + 1]!, z = pos[v * 3 + 2]!;
-    let best = Infinity, bestAtom = -1;
+    let best = Infinity, bestAtom = 0;
     const visit = (j: number) => {
       const dx = x - centers[j * 3]!, dy = y - centers[j * 3 + 1]!, dz = z - centers[j * 3 + 2]!;
       const d = Math.sqrt(dx * dx + dy * dy + dz * dz) - vdwRadii[j]!;
@@ -430,7 +483,7 @@ function assignAtoms(mesh: RawMesh, centers: Float32Array, vdwRadii: Float32Arra
       }
     };
     atomCells.forEachNear(x, y, z, searchRadius, visit);
-    if (bestAtom < 0) {
+    if (best === Infinity) {
       for (let j = 0; j < vdwRadii.length; ++j) visit(j);
     }
     owner[v] = bestAtom;
@@ -515,32 +568,79 @@ function splitIntoChunks(mesh: RawMesh, owner: Int32Array, maxVerts: number): Su
   return chunks;
 }
 
+// Chooses the grid for a surface and cuts it into at least minSlabs slabs
+// (more if needed to keep each slab below maxSlabPoints grid points), which
+// can then be computed independently with computeSurfaceSlab.
+// atoms holds x, y, z and van der Waals radius for each atom.
+export function planSurface(atoms: Float32Array, params: SurfaceParams,
+                            minSlabs = 1): SurfacePlan {
+  const { count, centers, radii } = prepareAtoms(atoms, params);
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < count; ++i) {
+    for (let k = 0; k < 3; ++k) {
+      lo[k] = Math.min(lo[k]!, centers[i * 3 + k]! - radii[i]!);
+      hi[k] = Math.max(hi[k]!, centers[i * 3 + k]! + radii[i]!);
+    }
+  }
+  if (count === 0) {
+    return { grid: { origin: [0, 0, 0], spacing: params.gridSpacing, nx: 0, ny: 0, nz: 0 },
+             slabs: [] };
+  }
+  const maxPoints = params.maxGridPoints || DEFAULT_MAX_GRID_POINTS;
+  let h = params.gridSpacing;
+  const extent = [0, 1, 2].map((k) => hi[k]! - lo[k]!);
+  const pointsFor = (s: number) =>
+    extent.reduce((p, e) => p * (Math.ceil(e / s) + 5), 1);
+  while (pointsFor(h) > maxPoints) h *= 1.05;
+  const pad = 2 * h;
+  const grid: GridShape = {
+    origin: [lo[0]! - pad, lo[1]! - pad, lo[2]! - pad],
+    spacing: h,
+    nx: Math.ceil(extent[0]! / h) + 5,
+    ny: Math.ceil(extent[1]! / h) + 5,
+    nz: Math.ceil(extent[2]! / h) + 5,
+  };
+  const cellLayers = grid.nz - 1;
+  const maxSlabPoints = params.maxSlabPoints || DEFAULT_MAX_SLAB_POINTS;
+  const numSlabs = Math.min(cellLayers, Math.max(
+    minSlabs, Math.ceil(grid.nx * grid.ny * grid.nz / maxSlabPoints)));
+  const slabs: [number, number][] = [];
+  for (let s = 0; s < numSlabs; ++s) {
+    slabs.push([Math.round(s * cellLayers / numSlabs),
+                Math.round((s + 1) * cellLayers / numSlabs)]);
+  }
+  return { grid, slabs };
+}
+
+// Computes the part of the surface in the cells between layers z0 and z1 of
+// grid. Neighbouring slabs sample their shared grid layer identically, so
+// their meshes meet without cracks.
+export function computeSurfaceSlab(atoms: Float32Array, params: SurfaceParams,
+                                   grid: GridShape, z0: number, z1: number): SurfaceChunk[] {
+  const prepared = prepareAtoms(atoms, params);
+  // one extra layer on either side, for the normals of vertices on the
+  // slab's boundary layers
+  const zl = Math.max(0, z0 - 1), zh = Math.min(grid.nz - 1, z1 + 1);
+  const h = grid.spacing;
+  const shape: GridShape = {
+    origin: [grid.origin[0], grid.origin[1], grid.origin[2] + zl * h],
+    spacing: h, nx: grid.nx, ny: grid.ny, nz: zh - zl + 1,
+  };
+  const atomCells = new CellGrid(prepared.centers, prepared.count, 2 * prepared.maxRadius);
+  const sampled = sampleField(prepared, atomCells, shape, params);
+  const mesh = triangulate(sampled, z0 - zl, z1 - zl);
+  // every SES/SAS/vdW point lies within probe + h of some vdW sphere
+  const owner = assignMissingOwners(mesh, prepared, atomCells, prepared.maxRadius + h);
+  return splitIntoChunks(mesh, owner, params.maxChunkVerts || DEFAULT_MAX_CHUNK_VERTS);
+}
+
+// Computes the whole surface in the calling thread.
 // atoms holds x, y, z and van der Waals radius for each atom.
 export function computeSurface(atoms: Float32Array, params: SurfaceParams): SurfaceMesh {
-  const count = atoms.length / 4;
-  if (count === 0) {
-    return { chunks: [], gridSpacing: params.gridSpacing };
+  const plan = planSurface(atoms, params);
+  const chunks: SurfaceChunk[] = [];
+  for (const [z0, z1] of plan.slabs) {
+    chunks.push(...computeSurfaceSlab(atoms, params, plan.grid, z0, z1));
   }
-  const centers = new Float32Array(count * 3);
-  const vdwRadii = new Float32Array(count);
-  const radii = new Float32Array(count);
-  const inflate = params.type === 'vdw' ? 0 : params.probeRadius;
-  let maxRadius = 0;
-  for (let i = 0; i < count; ++i) {
-    centers[i * 3] = atoms[i * 4]!;
-    centers[i * 3 + 1] = atoms[i * 4 + 1]!;
-    centers[i * 3 + 2] = atoms[i * 4 + 2]!;
-    vdwRadii[i] = atoms[i * 4 + 3]!;
-    radii[i] = vdwRadii[i]! + inflate;
-    maxRadius = Math.max(maxRadius, radii[i]!);
-  }
-  const atomCells = new CellGrid(centers, count, 2 * maxRadius);
-  const grid = sampleField(centers, radii, atomCells, maxRadius, params);
-  const mesh = triangulate(grid);
-  // every SES/SAS/vdW point lies within probe + h of some vdW sphere
-  const owner = assignAtoms(mesh, centers, vdwRadii, atomCells,
-                            maxRadius + grid.spacing);
-  const chunks = splitIntoChunks(mesh, owner,
-                                 params.maxChunkVerts || DEFAULT_MAX_CHUNK_VERTS);
-  return { chunks, gridSpacing: grid.spacing };
+  return { chunks, gridSpacing: plan.grid.spacing };
 }
