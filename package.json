@@ -29,8 +29,7 @@
   "files": [
     "README.md",
     "LICENSE.txt",
-    "dist",
-    "pdbs"
+    "dist"
   ],
   "keywords": [
     "protein",
