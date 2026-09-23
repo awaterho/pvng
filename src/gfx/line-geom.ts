@@ -32,6 +32,7 @@ interface Shader extends ChainDataShader {
 
 interface ShaderCatalog {
   selectLines: Shader;
+  pickLines: Shader;
   select: Shader;
   lines: Shader;
   linesTransparent?: Shader;
@@ -85,6 +86,7 @@ utils.derive(LineGeom, BaseGeom, {
 
   setLineWidth: function(this: LineGeom, width: number) {
     this._lineWidth = width;
+    this._pointSize = width;
   },
   setPointSize: function(this: LineGeom, size: number) {
     this._pointSize = size;
@@ -98,10 +100,10 @@ utils.derive(LineGeom, BaseGeom, {
     this: LineGeom, shaderCatalog: ShaderCatalog, style: unknown, pass: unknown
   ) {
     if (pass === 'outline') {
-      return shaderCatalog.selectLines;
+      return null;
     }
     if (pass === 'select') {
-      return shaderCatalog.select;
+      return shaderCatalog.pickLines;
     }
     if (pass === 'transparent') {
       return shaderCatalog.linesTransparent ?? null;
@@ -125,6 +127,7 @@ utils.derive(LineGeom, BaseGeom, {
     if (shader.selectAttrib !== -1) {
       pointSizeMul = 4.0 * cam.upsamplingFactor();
     }
+    this._gl.disable(this._gl.CULL_FACE);
     let i;
     if (additionalTransforms) {
       cam.bind(shader);
@@ -150,6 +153,7 @@ utils.derive(LineGeom, BaseGeom, {
         vertArrays[i]!.releaseAttribs(shader);
       }
     }
+    this._gl.enable(this._gl.CULL_FACE);
   },
 
   vertArray: function(this: LineGeom) { return this._va; }

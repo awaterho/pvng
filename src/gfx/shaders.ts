@@ -23,6 +23,7 @@ export interface ShaderSources {
   LINES_FS: string;
   SELECT_LINES_FS: string;
   SELECT_LINES_VS: string;
+  PICK_LINES_VS: string;
   SELECT_VS: string;
   SELECT_FS: string;
   LINES_VS: string;
@@ -103,9 +104,14 @@ vec3 handleFog(vec3 inColor) {\n\
 LINES_FS : '\n\
 varying vec4 vertColor;\n\
 varying vec3 vertNormal;\n\
+varying vec2 lineMapping;\n\
+varying float lineEdge;\n\
 \n\
 void main(void) {\n\
-  gl_FragColor = handleAlpha(vertColor);\n\
+  float edge = lineEdge;\n\
+  float coverage = lineMapping.x > 1.5 ? 1.0 :\n\
+    1.0 - smoothstep(1.0 - edge, 1.0 + edge, abs(lineMapping.y));\n\
+  gl_FragColor = handleAlpha(vec4(vertColor.rgb, vertColor.a * coverage));\n\
   gl_FragColor.rgb = handleFog(gl_FragColor.rgb);\n\
 }',
 
@@ -113,6 +119,8 @@ SELECT_LINES_FS : '\n\
 precision ${PRECISION} float;\n\
 \n\
 varying float vertSelect;\n\
+varying vec2 lineMapping;\n\
+varying float lineEdge;\n\
 varying vec3 vertNormal;\n\
 uniform float fogNear;\n\
 uniform float fogFar;\n\
@@ -121,9 +129,12 @@ uniform bool fog;\n\
 uniform vec4 selectionColor;\n\
 \n\
 void main(void) {\n\
+  float edge = lineEdge;\n\
+  float coverage = lineMapping.x > 1.5 ? 1.0 :\n\
+    1.0 - smoothstep(1.0 - edge, 1.0 + edge, abs(lineMapping.y));\n\
   gl_FragColor = mix(vec4(0.0, 0.0, 0.0, 0.0), \n\
                      vec4(selectionColor.rgb, 1.0), vertSelect);\n\
-  gl_FragColor.a = step(0.5, vertSelect);\n\
+  gl_FragColor.a = step(0.5, vertSelect) * coverage;\n\
   if (gl_FragColor.a == 0.0) { discard; }\n\
   float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
   if (fog) {\n\
@@ -135,20 +146,66 @@ void main(void) {\n\
 // hemilight vertex shader
 SELECT_LINES_VS : '\n\
 attribute vec3 attrPos;\n\
+attribute vec3 attrEnd;\n\
+attribute vec2 attrMapping;\n\
 attribute float attrSelect;\n\
 \n\
 uniform mat4 projectionMat;\n\
 uniform mat4 modelviewMat;\n\
 uniform float pointSize;\n\
+uniform vec2 relativePixelSize;\n\
 varying float vertSelect;\n\
+varying vec2 lineMapping;\n\
+varying float lineEdge;\n\
 void main(void) {\n\
-  gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
-  gl_Position.z += gl_Position.w * 0.000001; \n\
-  float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
-  gl_PointSize = pointSize * 200.0 / abs(distToCamera); \n\
+  vec4 start = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+  vec4 end = projectionMat * modelviewMat * vec4(attrEnd, 1.0);\n\
+  float aspect = relativePixelSize.y / relativePixelSize.x;\n\
+  vec2 direction = normalize(vec2((end.x / end.w - start.x / start.w) * aspect,\n\
+                                  end.y / end.w - start.y / start.w));\n\
+  vec2 perpendicular = vec2(-direction.y / aspect, direction.x);\n\
+  gl_Position = mix(start, end, attrMapping.x);\n\
+  gl_Position.xy += gl_Position.w * perpendicular * attrMapping.y * pointSize *\n\
+                    0.25 * relativePixelSize;\n\
+  gl_Position.z += gl_Position.w * 0.000001;\n\
   vertSelect = attrSelect;\n\
+  lineMapping = attrMapping;\n\
+  lineEdge = 2.0 / max(pointSize, 1.0);\n\
 }',
  
+PICK_LINES_VS : '\n\
+precision ${PRECISION} float;\n\
+attribute vec3 attrPos;\n\
+attribute vec3 attrEnd;\n\
+attribute vec2 attrMapping;\n\
+attribute float attrObjId;\n\
+attribute vec4 attrColor;\n\
+uniform mat4 projectionMat;\n\
+uniform mat4 modelviewMat;\n\
+uniform float pointSize;\n\
+uniform vec2 relativePixelSize;\n\
+varying float objId;\n\
+varying float objAlpha;\n\
+void main(void) {\n\
+  if (attrMapping.x > 1.5) {\n\
+    gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+    float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
+    gl_PointSize = pointSize * 200.0 / abs(distToCamera);\n\
+  } else {\n\
+    vec4 start = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+    vec4 end = projectionMat * modelviewMat * vec4(attrEnd, 1.0);\n\
+    float aspect = relativePixelSize.y / relativePixelSize.x;\n\
+    vec2 direction = normalize(vec2((end.x / end.w - start.x / start.w) * aspect,\n\
+                                    end.y / end.w - start.y / start.w));\n\
+    vec2 perpendicular = vec2(-direction.y / aspect, direction.x);\n\
+    gl_Position = mix(start, end, attrMapping.x);\n\
+    gl_Position.xy += gl_Position.w * perpendicular * attrMapping.y * pointSize *\n\
+              0.25 * relativePixelSize;\n\
+  }\n\
+  objId = attrObjId;\n\
+  objAlpha = attrColor.a;\n\
+}',
+
 SELECT_VS : '\n\
 precision ${PRECISION} float;\n\
 uniform mat4 projectionMat;\n\
@@ -196,17 +253,39 @@ void main(void) {\n\
 // hemilight vertex shader
 LINES_VS : '\n\
 attribute vec3 attrPos;\n\
+attribute vec3 attrEnd;\n\
+attribute vec2 attrMapping;\n\
 attribute vec4 attrColor;\n\
 \n\
 uniform mat4 projectionMat;\n\
 uniform mat4 modelviewMat;\n\
 varying vec4 vertColor;\n\
 uniform float pointSize;\n\
+uniform vec2 relativePixelSize;\n\
+varying vec2 lineMapping;\n\
+varying float lineEdge;\n\
 void main(void) {\n\
-  gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
-  float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
-  gl_PointSize = pointSize * 200.0 / abs(distToCamera); \n\
+  if (attrMapping.x > 1.5) {\n\
+    gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+    float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
+    gl_PointSize = pointSize * 200.0 / abs(distToCamera);\n\
+    lineMapping = attrMapping;\n\
+    lineEdge = 0.0;\n\
+    vertColor = attrColor;\n\
+    return;\n\
+  }\n\
+  vec4 start = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+  vec4 end = projectionMat * modelviewMat * vec4(attrEnd, 1.0);\n\
+  float aspect = relativePixelSize.y / relativePixelSize.x;\n\
+  vec2 direction = normalize(vec2((end.x / end.w - start.x / start.w) * aspect,\n\
+                                  end.y / end.w - start.y / start.w));\n\
+  vec2 perpendicular = vec2(-direction.y / aspect, direction.x);\n\
+  gl_Position = mix(start, end, attrMapping.x);\n\
+  gl_Position.xy += gl_Position.w * perpendicular * attrMapping.y * pointSize *\n\
+                    0.25 * relativePixelSize;\n\
   vertColor = attrColor;\n\
+  lineMapping = attrMapping;\n\
+  lineEdge = 2.0 / max(pointSize, 1.0);\n\
 }',
 
 // hemilight fragment shader
@@ -538,16 +617,38 @@ void main(void) {\n\
 
 OIT_ACCUM_LINES_VS : '#version 300 es\n\
 in vec3 attrPos;\n\
+in vec3 attrEnd;\n\
+in vec2 attrMapping;\n\
 in vec4 attrColor;\n\
 \n\
 uniform mat4 projectionMat;\n\
 uniform mat4 modelviewMat;\n\
 out vec4 vertColor;\n\
+out vec2 lineMapping;\n\
+out float lineEdge;\n\
 uniform float pointSize;\n\
+uniform vec2 relativePixelSize;\n\
 void main(void) {\n\
-  gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
-  float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
-  gl_PointSize = pointSize * 200.0 / abs(distToCamera); \n\
+  if (attrMapping.x > 1.5) {\n\
+    gl_Position = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+    float distToCamera = vec4(modelviewMat * vec4(attrPos, 1.0)).z;\n\
+    gl_PointSize = pointSize * 200.0 / abs(distToCamera);\n\
+    lineMapping = attrMapping;\n\
+    lineEdge = 0.0;\n\
+    vertColor = attrColor;\n\
+    return;\n\
+  }\n\
+  vec4 start = projectionMat * modelviewMat * vec4(attrPos, 1.0);\n\
+  vec4 end = projectionMat * modelviewMat * vec4(attrEnd, 1.0);\n\
+  float aspect = relativePixelSize.y / relativePixelSize.x;\n\
+  vec2 direction = normalize(vec2((end.x / end.w - start.x / start.w) * aspect,\n\
+                                  end.y / end.w - start.y / start.w));\n\
+  vec2 perpendicular = vec2(-direction.y / aspect, direction.x);\n\
+  gl_Position = mix(start, end, attrMapping.x);\n\
+  gl_Position.xy += gl_Position.w * perpendicular * attrMapping.y * pointSize *\n\
+                    0.25 * relativePixelSize;\n\
+  lineMapping = attrMapping;\n\
+  lineEdge = 2.0 / max(pointSize, 1.0);\n\
   vertColor = attrColor;\n\
 }',
 
@@ -555,6 +656,8 @@ OIT_ACCUM_LINES_FS : '#version 300 es\n\
 precision ${PRECISION} float;\n\
 \n\
 in vec4 vertColor;\n\
+in vec2 lineMapping;\n\
+in float lineEdge;\n\
 uniform bool fog;\n\
 uniform float fogNear;\n\
 uniform float fogFar;\n\
@@ -576,6 +679,10 @@ float oitWeight(float z, float a) {\n\
 \n\
 void main(void) {\n\
   vec4 color = vertColor;\n\
+  float edge = lineEdge;\n\
+  float coverage = lineMapping.x > 1.5 ? 1.0 :\n\
+    1.0 - smoothstep(1.0 - edge, 1.0 + edge, abs(lineMapping.y));\n\
+  color.a *= coverage;\n\
   if (color.a >= 0.999 || color.a <= 0.001) { discard; }\n\
   float depth = gl_FragCoord.z / gl_FragCoord.w;\n\
   color.rgb = handleFog(color.rgb, depth);\n\

@@ -426,7 +426,7 @@ const linesForChain = (function () {
         lineCount += 3;
       }
     });
-    const va = lineGeom.addChainVertArray(chain as never, lineCount * 2);
+    const va = lineGeom.addChainVertArray(chain as never, lineCount * 6);
     chain.eachAtom(function(atom) {
       // for atoms without bonds, we draw a small cross, otherwise these atoms
       // would be invisible on the screen.
@@ -474,7 +474,7 @@ exports.lines = function(structure: RenderStructure, gl: WebGL2RenderingContext,
 const _lineTraceNumVerts = function(traces: RenderTrace[]) {
   let numVerts = 0;
   for (let i = 0; i < traces.length; ++i) {
-    numVerts += 2 * (traces[i]!.length() - 1);
+    numVerts += 6 * (traces[i]!.length() - 1);
   }
   return numVerts;
 };
@@ -573,7 +573,7 @@ exports.lineTrace = function(structure: RenderStructure, gl: WebGL2RenderingCont
 const _slineNumVerts = function(traces: RenderTrace[], splineDetail: number) {
   let numVerts = 0;
   for (let i = 0; i < traces.length; ++i) {
-    numVerts += 2 * (splineDetail * (traces[i]!.length() - 1) + 1);
+    numVerts += 6 * (splineDetail * (traces[i]!.length() - 1) + 1);
   }
   return numVerts;
 };

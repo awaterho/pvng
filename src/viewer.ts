@@ -602,6 +602,8 @@ class Viewer {
       text : c.initShader(shaders.TEXT_VS, shaders.TEXT_FS, p),
       selectLines : c.initShader(shaders.SELECT_LINES_VS,
                                  shaders.SELECT_LINES_FS, p),
+      pickLines : c.initShader(shaders.PICK_LINES_VS,
+               shaders.SELECT_FS, p),
       select : c.initShader(shaders.SELECT_VS, shaders.SELECT_FS, p)
     };
     const hasFragDepth = !!c.gl().getExtension('EXT_frag_depth');

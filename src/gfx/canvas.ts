@@ -220,6 +220,8 @@ class Canvas {
     const getUniformLoc = utils.bind(gl, gl.getUniformLocation) as
       (p: WebGLProgram, name: string) => WebGLUniformLocation | null;
     shaderProgram.posAttrib = getAttribLoc(shaderProgram, 'attrPos');
+    shaderProgram.endAttrib = getAttribLoc(shaderProgram, 'attrEnd');
+    shaderProgram.mappingAttrib = getAttribLoc(shaderProgram, 'attrMapping');
     shaderProgram.colorAttrib = getAttribLoc(shaderProgram, 'attrColor');
     shaderProgram.normalAttrib = getAttribLoc(shaderProgram, 'attrNormal');
     shaderProgram.objIdAttrib = getAttribLoc(shaderProgram, 'attrObjId');

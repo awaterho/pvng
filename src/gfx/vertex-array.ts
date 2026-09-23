@@ -22,6 +22,8 @@ import VertexArrayBase from './vertex-array-base';
 
 interface Shader extends WebGLProgram {
   posAttrib: number;
+  endAttrib: number;
+  mappingAttrib: number;
   colorAttrib: number;
   objIdAttrib: number;
   selectAttrib: number;
@@ -35,6 +37,8 @@ interface Shader extends WebGLProgram {
 interface VertexArray extends VertexArrayBase {
   _numVerts: number;
   _primitiveType: number;
+  _END_OFFSET: number;
+  _MAPPING_OFFSET: number;
   _POS_OFFSET: number;
   _ID_OFFSET: number;
 
@@ -64,16 +68,18 @@ const VertexArray = function(
     this: VertexArray, gl: WebGL2RenderingContext, numVerts: number, float32Allocator: unknown
   ) => void).call(this, gl, numVerts, float32Allocator);
   this._numVerts = 0;
-  this._primitiveType = this._gl.LINES;
+  this._primitiveType = this._gl.TRIANGLES;
 } as unknown as VertexArrayConstructor;
 
 utils.derive(VertexArray, VertexArrayBase, {
 
-  _FLOATS_PER_VERT : 9,
+  _FLOATS_PER_VERT : 14,
   _POS_OFFSET : 0,
-  _COLOR_OFFSET : 3,
-  _ID_OFFSET : 7,
-  _SELECT_OFFSET : 8,
+  _END_OFFSET : 3,
+  _COLOR_OFFSET : 6,
+  _ID_OFFSET : 10,
+  _SELECT_OFFSET : 11,
+  _MAPPING_OFFSET : 12,
 
   numVerts: function(this: VertexArray) { return this._numVerts; },
 
@@ -81,12 +87,15 @@ utils.derive(VertexArray, VertexArrayBase, {
     if (enable) {
       this._primitiveType = this._gl.POINTS;
     } else {
-      this._primitiveType = this._gl.LINES;
+      this._primitiveType = this._gl.TRIANGLES;
     }
   },
 
   addPoint: function(this: VertexArray, pos: ArrayLike<number>, color: ArrayLike<number>, id: number): void {
     let index = this._FLOATS_PER_VERT * this._numVerts;
+    this._vertData[index++] = pos[0]!;
+    this._vertData[index++] = pos[1]!;
+    this._vertData[index++] = pos[2]!;
     this._vertData[index++] = pos[0]!;
     this._vertData[index++] = pos[1]!;
     this._vertData[index++] = pos[2]!;
@@ -96,6 +105,8 @@ utils.derive(VertexArray, VertexArrayBase, {
     this._vertData[index++] = color[3]!;
     this._vertData[index++] = id;
     this._vertData[index++] = 0.0;
+    this._vertData[index++] = 2.0;
+    this._vertData[index++] = 2.0;
     this._numVerts += 1;
     this._ready = false;
     this._boundingSphere = null;
@@ -105,8 +116,32 @@ utils.derive(VertexArray, VertexArrayBase, {
     this: VertexArray, startPos: ArrayLike<number>, startColor: ArrayLike<number>,
     endPos: ArrayLike<number>, endColor: ArrayLike<number>, idOne: number, idTwo: number,
   ): void {
-    this.addPoint(startPos, startColor, idOne);
-    this.addPoint(endPos, endColor, idTwo);
+    const corners = [
+      [0.0, -1.0], [1.0, -1.0], [1.0, 1.0],
+      [0.0, -1.0], [1.0, 1.0], [0.0, 1.0],
+    ];
+    for (let i = 0; i < corners.length; ++i) {
+      const corner = corners[i]!;
+      const clr = corner[0] === 0.0 ? startColor : endColor;
+      let index = this._FLOATS_PER_VERT * this._numVerts;
+      this._vertData[index++] = startPos[0]!;
+      this._vertData[index++] = startPos[1]!;
+      this._vertData[index++] = startPos[2]!;
+      this._vertData[index++] = endPos[0]!;
+      this._vertData[index++] = endPos[1]!;
+      this._vertData[index++] = endPos[2]!;
+      this._vertData[index++] = clr[0]!;
+      this._vertData[index++] = clr[1]!;
+      this._vertData[index++] = clr[2]!;
+      this._vertData[index++] = clr[3]!;
+      this._vertData[index++] = corner[0] === 0.0 ? idOne : idTwo;
+      this._vertData[index++] = 0.0;
+      this._vertData[index++] = corner[0]!;
+      this._vertData[index++] = corner[1]!;
+      this._numVerts += 1;
+    }
+    this._ready = false;
+    this._boundingSphere = null;
   },
 
 
@@ -114,6 +149,12 @@ utils.derive(VertexArray, VertexArrayBase, {
     this._gl.vertexAttribPointer(shader.posAttrib, 3, this._gl.FLOAT, false,
                                   this._FLOATS_PER_VERT * 4,
                                   this._POS_OFFSET * 4);
+    if (shader.endAttrib !== undefined && shader.endAttrib !== -1) {
+      this._gl.vertexAttribPointer(shader.endAttrib, 3, this._gl.FLOAT, false,
+                                   this._FLOATS_PER_VERT * 4,
+                                   this._END_OFFSET * 4);
+      this._gl.enableVertexAttribArray(shader.endAttrib);
+    }
     if (shader.colorAttrib !== -1) {
       this._gl.vertexAttribPointer(shader.colorAttrib, 4, this._gl.FLOAT, false,
                                   this._FLOATS_PER_VERT * 4,
@@ -133,6 +174,12 @@ utils.derive(VertexArray, VertexArrayBase, {
                                    this._SELECT_OFFSET * 4);
       this._gl.enableVertexAttribArray(shader.selectAttrib);
     }
+    if (shader.mappingAttrib !== undefined && shader.mappingAttrib !== -1) {
+      this._gl.vertexAttribPointer(shader.mappingAttrib, 2, this._gl.FLOAT,
+                                   false, this._FLOATS_PER_VERT * 4,
+                                   this._MAPPING_OFFSET * 4);
+      this._gl.enableVertexAttribArray(shader.mappingAttrib);
+    }
   },
 
   releaseAttribs: function(this: VertexArray, shader: Shader): void {
@@ -144,6 +191,12 @@ utils.derive(VertexArray, VertexArrayBase, {
     }
     if (shader.selectAttrib !== -1) {
       this._gl.disableVertexAttribArray(shader.selectAttrib);
+    }
+    if (shader.endAttrib !== undefined && shader.endAttrib !== -1) {
+      this._gl.disableVertexAttribArray(shader.endAttrib);
+    }
+    if (shader.mappingAttrib !== undefined && shader.mappingAttrib !== -1) {
+      this._gl.disableVertexAttribArray(shader.mappingAttrib);
     }
   },
 

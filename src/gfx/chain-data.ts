@@ -27,6 +27,8 @@ import type { ShaderProgram } from './cam';
 export interface Shader extends ShaderProgram {
   symId: WebGLUniformLocation;
   posAttrib: number;
+  endAttrib: number;
+  mappingAttrib: number;
   colorAttrib: number;
   objIdAttrib: number;
   selectAttrib: number;
