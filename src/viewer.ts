@@ -32,6 +32,8 @@ import TouchHandler from './touch';
 import MouseHandler from './mouse';
 import renderModuleRaw from './gfx/render';
 import type { RenderStructure, RenderOptions, RenderAtom } from './gfx/render';
+import SurfaceWorker from './surface/worker?worker&inline';
+import type { SurfaceMesh, SurfaceParams, SurfaceType } from './surface/compute';
 import TextLabel, { type TextLabel as ITextLabel, type TextLabelOptions } from './gfx/label';
 import CustomMeshCtor, { type CustomMesh } from './gfx/custom-mesh';
 import anim from './gfx/animation';
@@ -53,7 +55,9 @@ interface RenderModule {
   sline(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
   trace(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
   cartoon(structure: RenderStructure, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
-  surface(data: DataView, gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
+  surfaceAtoms(structure: RenderStructure): { atoms: RenderAtom[]; data: Float32Array };
+  surface(mesh: SurfaceMesh, atoms: RenderAtom[], structure: RenderStructure,
+          gl: WebGL2RenderingContext, opts: RenderOptions): BaseGeom;
 }
 const render = renderModuleRaw as unknown as RenderModule;
 
@@ -333,6 +337,8 @@ class Viewer {
   private _extensions!: ViewerExtension[];
   private _initialized: boolean;
   private _objects: ViewerObject[];
+  // surfaces still being computed, see surface()
+  private _pendingSurfaces: { name: string; cancel(): void }[] = [];
   private _domElement: HTMLElement;
   private _redrawRequested: boolean;
   private _resize: boolean;
@@ -1073,6 +1079,7 @@ class Viewer {
       this._objects[i]!.destroy();
     }
     this._objects = [];
+    this._cancelSurfaces(/.*/);
   }
 
   on(eventName: string, callback: EventCallback | 'center'): void {
@@ -1239,10 +1246,56 @@ class Viewer {
   }
 
 
-  surface(name: string, data: DataView, opts?: Record<string, unknown>): BaseGeom {
-    const options = this._handleStandardOptions(opts);
-    const obj = render.surface(data, this._canvas!.gl(), options as unknown as RenderOptions);
-    return this.add(name, obj);
+  // computes the molecular surface of structure in a web worker and adds it
+  // under name once ready. Surface specific options:
+  //  - type: 'ses' (solvent excluded, default), 'sas' (solvent accessible)
+  //    or 'vdw' (van der Waals)
+  //  - probeRadius: solvent probe radius in Angstrom, default 1.4
+  //  - gridSpacing: sampling grid spacing in Angstrom, default 0.5. Smaller
+  //    values give finer surfaces at a steep cost in time and memory.
+  // Resolves to the added object, or to null when the surface got removed
+  // (with rm or clear) before it was ready.
+  surface(name: string, structure: RenderStructure, opts?: Record<string, unknown>): Promise<BaseGeom | null> {
+    const options = this._handleStandardMolOptions(opts, structure as never);
+    options.color = options.color || color.byElement();
+    const params: SurfaceParams = {
+      type: (options.type as SurfaceType | undefined) || 'ses',
+      probeRadius: options.probeRadius === undefined ? 1.4 : options.probeRadius as number,
+      gridSpacing: (options.gridSpacing as number | undefined) || 0.5,
+    };
+    const { atoms, data } = render.surfaceAtoms(structure);
+    return new Promise((resolve, reject) => {
+      const worker = new SurfaceWorker();
+      const pending = {
+        name,
+        cancel: () => {
+          worker.terminate();
+          resolve(null);
+        },
+      };
+      const finish = () => {
+        worker.terminate();
+        this._pendingSurfaces = this._pendingSurfaces.filter((p) => p !== pending);
+      };
+      worker.onmessage = (event: MessageEvent<SurfaceMesh>) => {
+        finish();
+        const obj = render.surface(event.data, atoms, structure, this._canvas!.gl(),
+                                   options as unknown as RenderOptions);
+        resolve(this.add(name, obj));
+      };
+      worker.onerror = (event) => {
+        finish();
+        reject(new Error('surface computation failed: ' + event.message));
+      };
+      this._pendingSurfaces.push(pending);
+      worker.postMessage({ atoms: data, params }, [data.buffer]);
+    });
+  }
+
+  private _cancelSurfaces(regex: RegExp): void {
+    const cancelled = this._pendingSurfaces.filter((p) => regex.test(p.name));
+    this._pendingSurfaces = this._pendingSurfaces.filter((p) => !regex.test(p.name));
+    cancelled.forEach((p) => p.cancel());
   }
 
   // renders the protein using a smoothly interpolated tube, essentially
@@ -1597,6 +1650,7 @@ class Viewer {
       }
     }
     this._objects = newObjects;
+    this._cancelSurfaces(regex);
   }
   all(): ViewerObject[] {
     return this._objects;

@@ -28,6 +28,7 @@ import color from '../color';
 import { vec3, vec4, mat3 } from 'gl-matrix';
 import type UniqueObjectIdPool from '../unique-object-id-pool';
 import type { ContinuousIdRange } from '../unique-object-id-pool';
+import type { SurfaceMesh } from '../surface/compute';
 
 // Structural typing for the mol data model (some tiers already typed, some
 // not): only what render.ts touches to build geometry.
@@ -66,6 +67,7 @@ interface RenderChain {
 }
 export interface RenderStructure {
   eachChain(callback: (chain: RenderChain) => void): void;
+  eachAtom(callback: (atom: RenderAtom) => void): void;
   select(what: unknown): RenderStructure;
 }
 
@@ -886,43 +888,68 @@ exports.cartoon = function(structure: RenderStructure, gl: WebGL2RenderingContex
   return meshGeom;
 };
 
-exports.surface = (function() {
-  const pos = vec3.create(), normal = vec3.create(),
-      color = vec4.fromValues(0.8, 0.8, 0.8, 1.0);
-  return function(data: DataView, gl: WebGL2RenderingContext, opts: RenderOptions) {
-    let offset = 0;
-    /*var version = */data.getUint32(0);
-    offset += 4;
-    const numVerts = data.getUint32(offset);
-    offset += 4;
-    const vertexStride = 4 * 6;
-    const facesDataStart = vertexStride * numVerts + offset;
-    const numFaces = data.getUint32(facesDataStart);
-    const meshGeom = new MeshGeomCtor(gl, opts.float32Allocator,
-                                opts.uint16Allocator);
-    meshGeom.setShowRelated('asym');
-    const va = meshGeom.addVertArray(numVerts, numFaces * 3);
-    let i;
-    for (i = 0 ; i < numVerts; ++i) {
-      vec3.set(pos, data.getFloat32(offset + 0), data.getFloat32(offset + 4),
-               data.getFloat32(offset + 8));
-      offset += 12;
-      vec3.set(normal, data.getFloat32(offset + 0), data.getFloat32(offset + 4),
-               data.getFloat32(offset + 8));
-      offset += 12;
-      va.addVertex(pos, normal, color, 0);
+// Collects the atoms a molecular surface is computed for (all but
+// hydrogens), packed as x, y, z, van der Waals radius for the surface worker.
+exports.surfaceAtoms = function(structure: RenderStructure) {
+  const atoms: RenderAtom[] = [];
+  structure.eachAtom(function(atom) {
+    if (atom.element().toUpperCase() !== 'H') atoms.push(atom);
+  });
+  const data = new Float32Array(atoms.length * 4);
+  for (let i = 0; i < atoms.length; ++i) {
+    const atom = atoms[i]!, pos = atom.pos();
+    data[i * 4] = pos[0]!;
+    data[i * 4 + 1] = pos[1]!;
+    data[i * 4 + 2] = pos[2]!;
+    data[i * 4 + 3] =
+      (VDW_RADIUS as Record<string, number>)[atom.element().toUpperCase()] || 1.7;
+  }
+  return { atoms, data };
+};
+
+// Builds the geometry for a surface mesh computed by the surface worker.
+// atoms are the atoms returned by surfaceAtoms, which the mesh's per-vertex
+// atom indices refer to.
+exports.surface = function(mesh: SurfaceMesh, atoms: RenderAtom[], structure: RenderStructure,
+                           gl: WebGL2RenderingContext, opts: RenderOptions) {
+  const meshGeom = new MeshGeomCtor(gl, opts.float32Allocator, opts.uint16Allocator);
+  const vertAssoc = new AtomVertexAssoc(structure as never, true);
+  meshGeom.addVertAssoc(vertAssoc as never);
+  // the surface spans chains, so it can't be drawn per chain for symmetry
+  // related copies.
+  meshGeom.setShowRelated('asym');
+  const idRange = opts.idPool.getContinuousRange(atoms.length)!;
+  meshGeom.addIdRange(idRange);
+  const objIds = new Float32Array(atoms.length);
+  const colors = new Float32Array(atoms.length * 4);
+  opts.color.begin(structure as never);
+  for (let i = 0; i < atoms.length; ++i) {
+    objIds[i] = idRange.nextId({ geom: meshGeom, atom: atoms[i]! });
+    opts.color.colorFor(atoms[i]! as never, colors, i * 4);
+  }
+  opts.color.end();
+  for (const chunk of mesh.chunks) {
+    const numVerts = chunk.atoms.length;
+    const va = meshGeom.addVertArray(numVerts, chunk.indices.length);
+    for (let v = 0; v < numVerts; ++v) {
+      const atom = chunk.atoms[v]!;
+      va.addVertex(chunk.positions.subarray(v * 3, v * 3 + 3),
+                   chunk.normals.subarray(v * 3, v * 3 + 3),
+                   colors.subarray(atom * 4, atom * 4 + 4), objIds[atom]!);
     }
-    offset = facesDataStart + 4;
-    for (i = 0 ; i < numFaces; ++i) {
-      const idx0 = data.getUint32(offset + 0),
-          idx1 = data.getUint32(offset + 4),
-          idx2 = data.getUint32(offset + 8);
-      offset += 12;
-      va.addTriangle(idx0 - 1, idx2 -1, idx1 - 1);
+    for (let i = 0; i < chunk.indices.length; i += 3) {
+      va.addTriangle(chunk.indices[i]!, chunk.indices[i + 1]!, chunk.indices[i + 2]!);
     }
-    return meshGeom;
-  };
-})();
+    // vertices are sorted by atom, so each atom owns contiguous runs
+    for (let start = 0; start < numVerts;) {
+      let end = start + 1;
+      while (end < numVerts && chunk.atoms[end] === chunk.atoms[start]) ++end;
+      vertAssoc.addAssoc(atoms[chunk.atoms[start]!]! as never, va as never, start, end);
+      start = end;
+    }
+  }
+  return meshGeom;
+};
 
 const _cartoonAddTube = (function() {
   const rotation = mat3.create();

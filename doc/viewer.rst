@@ -176,6 +176,17 @@ These methods will automatically add the object to the viewer, there is not need
   * *sphereDetail* number of vertical and horizontal arcs for the spheres.
   * *scaleByAtomRadius* Whether to scale spheres by atom's van der Waals radius. Defaults to true.
 
+.. function:: pv.Viewer.surface(name, structure[, options])
+
+  Renders the molecular surface of the structure (:class:`~pv.mol.Mol`, or :class:`~pv.mol.MolView`), leaving out hydrogens. The surface is computed in a web worker, so unlike the other render styles this function returns before the geometry exists; the object is added to the viewer once it is ready. Removing *name* with :func:`pv.Viewer.rm` or :func:`pv.Viewer.clear` before then cancels the computation. Pass e.g. ``structure.select('protein')`` to leave out waters and ligands. Accepted *options* are:
+
+  * *color*: the color operation to be used. Each surface point takes the color of the atom closest to it. Defaults to :func:`pv.color.byElement`.
+  * *type*: ``'ses'`` for the solvent excluded (Connolly) surface, ``'sas'`` for the solvent accessible surface or ``'vdw'`` for the van der Waals surface. Defaults to ``'ses'``.
+  * *probeRadius*: radius of the solvent probe in Angstrom, used for ``'ses'`` and ``'sas'``. Defaults to 1.4.
+  * *gridSpacing*: spacing of the sampling grid in Angstrom. Smaller values give finer surfaces, at a cost in time and memory that grows with the inverse cube of the spacing. Defaults to 0.5. Very large structures get a coarser grid automatically.
+
+  :returns: A promise that resolves to the geometry of the object, or to null when the surface was removed before it was ready.
+
 .. function:: pv.Viewer.renderAs(name, structure, mode[,options])
 
   Function to render the structure in any of the supported render styles. This essentially makes it possible to write code that is independent of the particular chosen render style.

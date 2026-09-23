@@ -92,6 +92,17 @@ function ballsAndSticks() {
   viewer.ballsAndSticks('structure', structure, { showRelated : '1' });
 }
 
+function surface() {
+  viewer.clear();
+  viewer.surface('structure', structure.select('protein'), {
+    color: color.ssSuccession()
+  }).then(function(go) {
+    if (go) {
+      go.setOpacity(currentOpacity);
+    }
+  });
+}
+
 function preset() {
   viewer.clear();
   var ligand = structure.select({'rnames' : ['SAH', 'RVP']});
@@ -258,6 +269,7 @@ $('#style-sline').click(sline);
 $('#style-trace').click(trace);
 $('#style-lines').click(lines);
 $('#style-balls-and-sticks').click(ballsAndSticks);
+$('#style-surface').click(surface);
 $('#style-points').click(points);
 $('#style-spheres').click(spheres);
 $('#color-uniform').click(uniform);
