@@ -22,7 +22,7 @@ function related() {
   return structure.assembly('1') ? '1' : 'asym';
 }
 
-// opacity slider (#opacity-widget): applies to every currently-visible
+// opacity slider (in #display-widget): applies to every currently-visible
 // render object that supports it, and is re-applied by preset() whenever a
 // new structure is loaded, so dragging the slider then loading a different
 // structure keeps the same transparency -- a quick way to see the
@@ -403,6 +403,27 @@ viewer = pv.Viewer(document.getElementById('viewer'), {
 });
 window.viewer = viewer;
 
+// fog and outline toggles, and a background slider running from white to
+// black. All start from the viewer's current options.
+function initDisplayControls() {
+  var fog = document.getElementById('fog-toggle');
+  var outline = document.getElementById('outline-toggle');
+  var background = document.getElementById('background-slider');
+  fog.checked = viewer.options('fog');
+  outline.checked = viewer.options('outline');
+  background.value = 1 - viewer.options('background')[0];
+  fog.addEventListener('change', function() {
+    viewer.options('fog', fog.checked);
+  });
+  outline.addEventListener('change', function() {
+    viewer.options('outline', outline.checked);
+  });
+  background.addEventListener('input', function() {
+    var grey = 1 - parseFloat(background.value);
+    viewer.options('background', [grey, grey, grey, 1]);
+  });
+}
+initDisplayControls();
 
 viewer.addListener('viewerReady', transferase);
 

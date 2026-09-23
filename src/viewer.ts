@@ -518,6 +518,14 @@ class Viewer {
       if (optName === 'fog') {
         this._cam.fog(value as boolean);
         this.requestRedraw();
+      } else if (optName === 'outline') {
+        this._cam.setOutlineEnabled(value as boolean);
+        this.requestRedraw();
+      } else if (optName === 'background') {
+        // fog fades towards the background, so it follows along
+        this._options.background = color.forceRGB(value as string | RGBA);
+        this._cam.setFogColor(this._options.background as vec3);
+        this.requestRedraw();
       } else if (optName === 'fov') {
         this._cam.setFieldOfViewY((value as number) * Math.PI / 180.0);
       } else if (optName === 'selectionColor') {
@@ -889,6 +897,8 @@ class Viewer {
     // it, which isn't possible against the canvas's own default framebuffer.
     this._sceneBuffers.bindOpaque();
     gl.depthMask(true);
+    const background = this._options.background;
+    gl.clearColor(background[0]!, background[1]!, background[2]!, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.CULL_FACE);
     // blending stays on for the whole opaque-target pass: when oit is true

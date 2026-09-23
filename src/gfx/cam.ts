@@ -425,6 +425,7 @@ class Cam {
 
   setFogColor(color: vec3): void {
     this._fogColor = vec3.clone(color);
+    this._incrementStateId();
   }
 
   currentShader(): ShaderProgram | null {

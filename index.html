@@ -698,19 +698,28 @@
         left: 50px;
         display: none;
       }
-      #opacity-widget {
+      #display-widget {
         position: absolute;
         top: 50px;
         right: 20px;
         background: rgba(255,255,255,0.85);
         padding: 8px 12px;
         border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         font-family: sans-serif;
         font-size: 13px;
       }
-      #opacity-widget input {
+      #display-widget input[type=range] {
         vertical-align: middle;
         margin-left: 8px;
+      }
+      #display-widget .toggles label {
+        display: inline-block;
+        margin-right: 12px;
+      }
+      #display-widget input[type=checkbox] {
+        vertical-align: middle;
+        margin: 0 4px 0 0;
       }
     </style>
     </head>
@@ -788,9 +797,15 @@
 <div id=traj-widget>
     <a id=traj-button href="#" class="alert button expand">Start</a>
 </div>
-<div id="opacity-widget">
-  <label for="opacity-slider">Opacity: <span id="opacity-value">1.00</span></label><br>
+<div id="display-widget">
+  <label for="opacity-slider">Opacity: <span id="opacity-value">1.00</span></label>
   <input type="range" id="opacity-slider" min="0" max="1" step="0.01" value="1">
+  <label for="background-slider">Background</label>
+  <input type="range" id="background-slider" min="0" max="1" step="0.01" value="0">
+  <div class="toggles">
+    <label><input type="checkbox" id="fog-toggle">Fog</label>
+    <label><input type="checkbox" id="outline-toggle">Outline</label>
+  </div>
 </div>
 </body>
 </html>
