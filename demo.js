@@ -121,7 +121,7 @@ function preset() {
 
 // loads a structure from its local mmCIF fixture (pdbs/<id>.cif).
 function load(cif_id) {
-  $('#traj-widget').hide();
+  document.getElementById('traj-widget').style.display = 'none';
   io.fetchCif('pdbs/'+cif_id+'.cif', function(s) {
     structure = s;
     preset();
@@ -131,19 +131,20 @@ function load(cif_id) {
 
 function trajectory() {
   viewer.clear();
-  $('#traj-widget').show();
+  document.getElementById('traj-widget').style.display = 'block';
   var theTimeOut;
   var intervalFunc;
-  $('#traj-button').click(function() {
-    var t = $('#traj-button').text();
-    if (t === 'Start') {
-      $('#traj-button').text('Stop');
+  var button = document.getElementById('traj-button');
+  button.onclick = function(event) {
+    event.preventDefault();
+    if (button.textContent === 'Start') {
+      button.textContent = 'Stop';
       theTimeOut = setInterval(intervalFunc, 1000.0/15.0);
     } else {
       clearInterval(theTimeOut);
-      $('#traj-button').text('Start');
+      button.textContent = 'Start';
     }
-  });
+  };
   pv.io.fetchCrd('pdbs/trj.crd', function(s) {
     structure = s;
     viewer.ballsAndSticks('trajectory', structure);
@@ -249,7 +250,7 @@ function cross() {
 }
 
 function ensemble() {
-  $('#traj-widget').hide();
+  document.getElementById('traj-widget').style.display = 'none';
   io.fetchCif('pdbs/1nmr.cif', function(structures) {
     viewer.clear()
     structure = structures[0];
@@ -259,34 +260,104 @@ function ensemble() {
     viewer.autoZoom();
   }, { loadAllModels : true } );
 }
-$(document).foundation();
-$('#1r6a').click(transferase);
-$('#1crn').click(crambin);
-$('#1ake').click(kinase);
-$('#4ubb').click(polymerase);
-$('#4c46').click(longHelices);
-$('#2f8v').click(telethonin);
-$('#2por').click(porin);
-$('#ensemble').click(ensemble);
-$('#custom-mesh').click(cross);
-$('#style-cartoon').click(cartoon);
-$('#style-tube').click(tube);
-$('#style-line-trace').click(lineTrace);
-$('#style-sline').click(sline);
-$('#style-trace').click(trace);
-$('#style-lines').click(lines);
-$('#style-balls-and-sticks').click(ballsAndSticks);
-$('#style-surface').click(surface);
-$('#style-points').click(points);
-$('#style-spheres').click(spheres);
-$('#color-uniform').click(uniform);
-$('#color-element').click(byElement);
-$('#color-chain').click(byChain);
-$('#color-ss-succ').click(ssSuccession);
-$('#color-ss').click(ss);
-$('#trajectory').click(trajectory);
-$('#color-rainbow').click(rainbow);
-$('#color-pro-red').click(proInRed);
+// menu behaviour, as Foundation's top-bar plugin used to provide it on top
+// of the Foundation styles in index.html. On wide screens the dropdowns open
+// on hover, which those styles key off the not-click class. On narrow
+// screens the menu icon expands the bar, and a menu title slides in its
+// entries with a Back link.
+function initTopBar() {
+  var bar = document.querySelector('.top-bar');
+  var section = bar.querySelector('.top-bar-section');
+  var narrow = window.matchMedia('(max-width: 40em)');
+  var closeSubmenu = function() {
+    bar.querySelectorAll('.has-dropdown.moved').forEach(function(item) {
+      item.classList.remove('moved');
+    });
+    section.style.left = '';
+    bar.style.height = '';
+  };
+  var collapse = function() {
+    closeSubmenu();
+    bar.classList.remove('expanded');
+  };
+  bar.querySelector('.toggle-topbar').addEventListener('click', function(event) {
+    event.preventDefault();
+    if (bar.classList.contains('expanded')) {
+      collapse();
+    } else {
+      bar.classList.add('expanded');
+    }
+  });
+  bar.querySelectorAll('.has-dropdown').forEach(function(item) {
+    item.classList.add('not-click');
+    var title = item.firstElementChild;
+    var dropdown = item.querySelector('.dropdown');
+    // same markup Foundation generates; the styles only show the
+    // js-generated entries on narrow screens
+    dropdown.insertAdjacentHTML('afterbegin',
+      '<li class="title back js-generated"><h5><a href="#">Back</a></h5></li>' +
+      '<li class="parent-link show-for-small"><a class="parent-link js-generated" href="#">' +
+      title.textContent + '</a></li>');
+    dropdown.querySelector('.back a').addEventListener('click', function(event) {
+      event.preventDefault();
+      closeSubmenu();
+    });
+    dropdown.querySelector('a.parent-link').addEventListener('click', function(event) {
+      event.preventDefault();
+    });
+    title.addEventListener('click', function(event) {
+      event.preventDefault();
+      if (!narrow.matches) {
+        return;
+      }
+      item.classList.add('moved');
+      section.style.left = '-100%';
+      bar.style.height = (bar.querySelector('.title-area').offsetHeight +
+                          dropdown.offsetHeight) + 'px';
+    });
+  });
+  // picking an entry closes the menu on narrow screens
+  bar.querySelectorAll('.dropdown li:not(.title):not(.parent-link) > a').forEach(function(link) {
+    link.addEventListener('click', collapse);
+  });
+  narrow.addEventListener('change', collapse);
+}
+
+function onClick(id, handler) {
+  document.getElementById(id).addEventListener('click', function(event) {
+    event.preventDefault();
+    handler();
+  });
+}
+
+initTopBar();
+onClick('1r6a', transferase);
+onClick('1crn', crambin);
+onClick('1ake', kinase);
+onClick('4ubb', polymerase);
+onClick('4c46', longHelices);
+onClick('2f8v', telethonin);
+onClick('2por', porin);
+onClick('ensemble', ensemble);
+onClick('custom-mesh', cross);
+onClick('style-cartoon', cartoon);
+onClick('style-tube', tube);
+onClick('style-line-trace', lineTrace);
+onClick('style-sline', sline);
+onClick('style-trace', trace);
+onClick('style-lines', lines);
+onClick('style-balls-and-sticks', ballsAndSticks);
+onClick('style-surface', surface);
+onClick('style-points', points);
+onClick('style-spheres', spheres);
+onClick('color-uniform', uniform);
+onClick('color-element', byElement);
+onClick('color-chain', byChain);
+onClick('color-ss-succ', ssSuccession);
+onClick('color-ss', ss);
+onClick('trajectory', trajectory);
+onClick('color-rainbow', rainbow);
+onClick('color-pro-red', proInRed);
 // fetches and renders a structure by PDB id from RCSB in mmCIF format, used
 // by both pressing Enter/blurring the input (the 'change' event) and
 // clicking the "Get" button next to it.
@@ -302,24 +373,25 @@ function getFromRcsb(pdbId) {
   });
 }
 
-$('#load-from-pdb').change(function() {
+document.getElementById('load-from-pdb').addEventListener('change', function() {
   var pdbId = this.value;
   this.value = '';
   this.blur();
   getFromRcsb(pdbId);
 });
 
-$('#get-pdb-button').click(function() {
-  var input = $('#load-from-pdb');
-  var pdbId = input.val();
-  input.val('');
+document.getElementById('get-pdb-button').addEventListener('click', function(event) {
+  event.preventDefault();
+  var input = document.getElementById('load-from-pdb');
+  var pdbId = input.value;
+  input.value = '';
   input.blur();
   getFromRcsb(pdbId);
 });
 
-$('#opacity-slider').on('input', function() {
+document.getElementById('opacity-slider').addEventListener('input', function() {
   var val = parseFloat(this.value);
-  $('#opacity-value').text(val.toFixed(2));
+  document.getElementById('opacity-value').textContent = val.toFixed(2);
   applyOpacity(val);
 });
 
@@ -330,6 +402,7 @@ viewer = pv.Viewer(document.getElementById('viewer'), {
     background : '#ccc', animateTime: 500, doubleClick : null
 });
 window.viewer = viewer;
+
 
 viewer.addListener('viewerReady', transferase);
 

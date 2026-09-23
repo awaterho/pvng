@@ -26,17 +26,6 @@ export default tseslint.config(
     },
   },
   {
-    // demo.js/select.js are plain browser scripts that rely on jQuery being
-    // loaded globally via a <script> tag (index.html/select.html), not an
-    // import -- same as window/document/etc. above.
-    files: ['demo.js', 'select.js'],
-    languageOptions: {
-      globals: {
-        $: 'readonly',
-      },
-    },
-  },
-  {
     // *.test.js and tests/browser/fixtures/** are mechanically-ported QUnit
     // test bodies (kept byte-for-byte identical to the originals apart from
     // the module wrapper); their pre-existing quality issues are left for a
@@ -45,7 +34,6 @@ export default tseslint.config(
       'dist/**',
       'dist-debug/**',
       'node_modules/**',
-      'js/**',
       'doc/**',
       'snippets/**',
       'src/tests/**/*.test.js',
