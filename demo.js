@@ -15,6 +15,13 @@ var color = pv.color;
 
 var structure;
 
+// draws biological assembly 1 (symmetry-related copies included) when the
+// structure defines one, e.g. entries fetched from RCSB, and just the
+// asymmetric unit otherwise. The local fixtures carry no assembly records.
+function related() {
+  return structure.assembly('1') ? '1' : 'asym';
+}
+
 // opacity slider (#opacity-widget): applies to every currently-visible
 // render object that supports it, and is re-applied by preset() whenever a
 // new structure is loaded, so dragging the slider then loading a different
@@ -36,14 +43,14 @@ function points() {
   viewer.clear();
   viewer.points('structure', structure, {
                          color: color.byResidueProp('num'),
-                         showRelated : '1' });
+                         showRelated : related() });
 }
 
 function lines() {
   viewer.clear();
   var go = viewer.lines('structure', structure, {
               color: color.byResidueProp('num'),
-              showRelated : '1' });
+              showRelated : related() });
   go.setSelection(go.select({rnumRange : [15,20]}));
   go.setOpacity(0.5, go.select({rnumRange : [25,30]}));
 }
@@ -51,7 +58,7 @@ function lines() {
 function cartoon() {
   viewer.clear();
   var go = viewer.cartoon('structure', structure, {
-      color : color.ssSuccession(), showRelated : '1',
+      color : color.ssSuccession(), showRelated : related(),
   });
   var rotation = viewpoint.principalAxes(go);
   //go.setSelection(go.select({rtype : 'C' }));
@@ -60,36 +67,36 @@ function cartoon() {
 
 function lineTrace() {
   viewer.clear();
-  viewer.lineTrace('structure', structure, { showRelated : '1' });
+  viewer.lineTrace('structure', structure, { showRelated : related() });
 }
 
 function spheres() {
   viewer.clear();
-  viewer.spheres('structure', structure, { showRelated : '1' });
+  viewer.spheres('structure', structure, { showRelated : related() });
 }
 
 function sline() {
   viewer.clear();
   viewer.sline('structure', structure,
-          { color : color.uniform('red'), showRelated : '1'});
+      { color : color.uniform('red'), showRelated : related() });
 }
 
 function tube() {
   viewer.clear();
-  viewer.tube('structure', structure);
+  viewer.tube('structure', structure, { showRelated : related() });
   viewer.lines('structure.ca', structure.select({aname :'CA'}),
             { color: color.uniform('blue'), lineWidth : 1,
-              showRelated : '1' });
+              showRelated : related() });
 }
 
 function trace() {
   viewer.clear();
-  viewer.trace('structure', structure, { showRelated : '1' });
+  viewer.trace('structure', structure, { showRelated : related() });
 
 }
 function ballsAndSticks() {
   viewer.clear();
-  viewer.ballsAndSticks('structure', structure, { showRelated : '1' });
+  viewer.ballsAndSticks('structure', structure, { showRelated : related() });
 }
 
 function surface() {
