@@ -194,11 +194,20 @@ function shouldIntroduceTraceBreak(
     thisAtom = thisResidue.atom('P');
   }
 
+  // isAminoacid()/isNucleotide() only guarantee the atoms used as thisAtom
+  // above (N, P) are present, not the ones used as prevAtom (C, O3'), which
+  // can be missing from the resolved density (e.g. a disordered O3' in an
+  // RNA/DNA structure). Without both atoms we can't confirm a bond, so play
+  // it safe and introduce a break rather than crash.
+  if (prevAtom === null || thisAtom === null) {
+    return true;
+  }
+
   // in case there is a bond, we don't introduce a chain break
-  if (prevAtom!.isConnectedTo(thisAtom)) {
+  if (prevAtom.isConnectedTo(thisAtom)) {
     return false;
   }
-  const sqrDist = vec3.sqrDist(prevAtom!.pos(), thisAtom!.pos());
+  const sqrDist = vec3.sqrDist(prevAtom.pos(), thisAtom.pos());
   return (Math.abs(sqrDist - 1.5*1.5) > 1);
 }
 
